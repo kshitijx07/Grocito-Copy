@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { productService } from '../api/productService';
-import { cartService } from '../api/cartService';
+import { enhancedCartService } from '../api/enhancedCartService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import Header from './Header';
@@ -10,6 +11,7 @@ import SearchAndFilter from './SearchAndFilter';
 import ProductCard from './ProductCard';
 import QuickStartGuide from './QuickStartGuide';
 import FloatingCartButton from './FloatingCartButton';
+
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -33,10 +35,10 @@ const ProductsPage = () => {
       // Use the provided userPincode parameter instead of the global pincode
       const pincodeToUse = userPincode || pincode;
       console.log(`Fetching products for pincode: ${pincodeToUse}`);
-      
+
       const productsData = await productService.getProductsByPincode(pincodeToUse);
       console.log(`Found ${productsData.length} products for pincode ${pincodeToUse}`);
-      
+
       setProducts(productsData);
       setFilteredProducts(productsData);
 
@@ -53,7 +55,7 @@ const ProductsPage = () => {
 
   const fetchCartData = async (userId) => {
     try {
-      const cartData = await cartService.getCartItems(userId);
+      const cartData = await enhancedCartService.getCartItems(userId);
       setCartItems(cartData);
       setCartCount(cartData.reduce((total, item) => total + item.quantity, 0));
     } catch (error) {
@@ -63,13 +65,13 @@ const ProductsPage = () => {
 
   useEffect(() => {
     console.log('ProductsPage useEffect triggered');
-    
+
     // CRITICAL FIX: Ensure we have a valid user and pincode
     try {
       // Get current user from auth service
       const currentUser = authService.getCurrentUser();
       console.log('Current user:', currentUser);
-      
+
       // Check if user is logged in
       if (!currentUser || !currentUser.id) {
         console.log('No valid user found, redirecting to login');
@@ -80,18 +82,19 @@ const ProductsPage = () => {
         navigate('/login');
         return;
       }
-      
+
       // Set user state
       setUser(currentUser);
-      
-      // Get pincode - prioritize user's profile pincode, then localStorage pincode
+
+      // Get pincode - PRIORITIZE localStorage pincode (from landing page) over user's profile pincode
       const storedPincode = localStorage.getItem('pincode');
-      console.log('Stored pincode:', storedPincode);
-      
-      // Determine which pincode to use
-      let pincodeToUse = currentUser.pincode || storedPincode;
-      console.log('Pincode to use:', pincodeToUse);
-      
+      console.log('Stored pincode from landing page:', storedPincode);
+      console.log('User profile pincode:', currentUser.pincode);
+
+      // Determine which pincode to use - LANDING PAGE PINCODE TAKES PRIORITY
+      let pincodeToUse = storedPincode || currentUser.pincode;
+      console.log('Pincode to use (landing page priority):', pincodeToUse);
+
       // If no pincode is available, use a default one
       if (!pincodeToUse) {
         pincodeToUse = '110001'; // Default pincode
@@ -102,22 +105,27 @@ const ProductsPage = () => {
           autoClose: 3000,
         });
       }
-      
-      // Update pincode in localStorage if it's different from user's pincode
-      if (currentUser.pincode && currentUser.pincode !== storedPincode) {
-        localStorage.setItem('pincode', currentUser.pincode);
-        console.log('Updated pincode from user profile:', currentUser.pincode);
-        toast.info(`Delivery location updated to your address pincode: ${currentUser.pincode}`, {
+
+      // Show info about which pincode is being used
+      if (storedPincode && currentUser.pincode && storedPincode !== currentUser.pincode) {
+        console.log(`Using delivery pincode ${storedPincode} instead of profile pincode ${currentUser.pincode}`);
+        toast.info(`Showing products for delivery to: ${storedPincode} (as selected on homepage)`, {
           position: "bottom-right",
-          autoClose: 3000,
+          autoClose: 4000,
+        });
+      } else if (storedPincode) {
+        console.log(`Using delivery pincode from landing page: ${storedPincode}`);
+        toast.success(`Delivering to: ${storedPincode}`, {
+          position: "bottom-right",
+          autoClose: 2000,
         });
       }
-      
+
       // Fetch products and cart data
       console.log('Fetching products and cart data for pincode:', pincodeToUse);
       fetchProducts(pincodeToUse);
       fetchCartData(currentUser.id);
-      
+
       // Show guide for first-time users
       const hasSeenGuide = localStorage.getItem('hasSeenGuide');
       if (!hasSeenGuide) {
@@ -160,17 +168,23 @@ const ProductsPage = () => {
         navigate('/login');
         return;
       }
-      
+
       console.log(`Adding product ${productId} to cart for user ${user.id}`);
       setAddingToCart(prev => ({ ...prev, [productId]: true }));
-      
-      // Add to cart
-      const result = await cartService.addToCart(user.id, productId, 1);
+
+      // Find the product data
+      const productData = products.find(p => p.id === productId);
+      if (!productData) {
+        throw new Error('Product not found');
+      }
+
+      // Add to cart with complete product data
+      const result = await enhancedCartService.addToCart(user.id, productId, 1, productData);
       console.log('Add to cart result:', result);
-      
+
       // Refresh cart data
       await fetchCartData(user.id);
-      
+
       // Show success message
       toast.success('Added to cart!', {
         position: "bottom-right",
@@ -178,7 +192,7 @@ const ProductsPage = () => {
       });
     } catch (error) {
       console.error('Error adding to cart:', error);
-      
+
       // Check if it's an authentication error
       if (error.message?.includes('authentication') || error.message?.includes('token')) {
         toast.error('Your session has expired. Please login again.');
@@ -206,37 +220,82 @@ const ProductsPage = () => {
     navigate('/');
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 100 }
+    }
+  };
+
   if (loading) {
-    return <LoadingSpinner message="Loading products..." />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-soft animate-pulse">
+            <span className="text-4xl">🛒</span>
+          </div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-2">
+            Loading Fresh Groceries...
+          </h2>
+          <p className="text-gray-600">Please wait while we prepare the best products for you</p>
+          <div className="mt-6 flex justify-center space-x-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Get the current pincode being used
-  const currentPincode = user?.pincode || pincode;
+  // Get the current pincode being used - prioritize localStorage (landing page) over user profile
+  const storedPincode = localStorage.getItem('pincode');
+  const currentPincode = storedPincode || user?.pincode || pincode;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-green-50">
+    <div className="min-h-screen bg-gray-50">
       <Header user={user} cartCount={cartCount} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-10 text-center">
-          <div className="inline-flex items-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
+        {/* Welcome Section */}
+        <div className="section-header mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-soft">
+                <span className="text-3xl">🛍️</span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  Fresh Groceries Delivered Fast
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Welcome back, <span className="font-semibold text-green-700">{user?.fullName || user?.email?.split('@')[0] || 'User'}</span>! 👋
+                </p>
+              </div>
             </div>
-            <h1 className="text-4xl font-bold text-green-700">
-              Fresh Groceries Delivered Fast
-            </h1>
-          </div>
-          <div className="text-gray-700 text-lg">
-            <p>
-              Welcome back, <span className="font-semibold text-green-700">{user?.fullName || user?.email?.split('@')[0] || 'User'}</span>!
-            </p>
-            <p className="mt-2">
-              Choose from <span className="font-semibold text-green-600 bg-yellow-200 px-3 py-1 rounded-full">{products.length}</span> products available in <span className="font-semibold text-green-700">{currentPincode}</span>
-            </p>
+            <div className="hidden lg:block">
+              <div className="bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl p-4 border border-green-200">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{products.length}</div>
+                  <div className="text-sm text-green-700 font-medium">Products Available</div>
+                  <div className="text-xs text-gray-600 mt-1">in {currentPincode}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -257,39 +316,36 @@ const ProductsPage = () => {
         )}
 
         {filteredProducts.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="relative">
-              <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+          <div className="card">
+            <div className="card-body text-center py-16">
+              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">
+                  {products.length === 0 ? '📦' : '🔍'}
+                </span>
               </div>
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
-                <span className="text-lg">🔍</span>
-              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                {products.length === 0 ? 'No products available' : 'No products found'}
+              </h3>
+              <p className="text-gray-600 text-lg max-w-md mx-auto mb-6">
+                {products.length === 0
+                  ? "We're working to stock products in your area. Please check back soon!"
+                  : searchQuery || selectedCategory !== 'All'
+                    ? 'Try adjusting your search or filter criteria'
+                    : 'No products match your criteria'
+                }
+              </p>
+              {(searchQuery || selectedCategory !== 'All') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('All');
+                  }}
+                  className="btn-primary"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
-              {products.length === 0 ? 'No products available' : 'No products found'}
-            </h3>
-            <p className="text-gray-600 text-lg max-w-md mx-auto mb-6">
-              {products.length === 0
-                ? "We're working to stock products in your area. Please check back soon!"
-                : searchQuery || selectedCategory !== 'All'
-                  ? 'Try adjusting your search or filter criteria'
-                  : 'No products match your criteria'
-              }
-            </p>
-            {(searchQuery || selectedCategory !== 'All') && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategory('All');
-                }}
-                className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl font-bold transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
-              >
-                Clear filters
-              </button>
-            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -307,24 +363,27 @@ const ProductsPage = () => {
 
         {/* Success Message */}
         {products.length > 0 && (
-          <div className="mt-12 bg-white border-2 border-green-200 rounded-2xl p-8 text-center shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+          <div className="card mt-12">
+            <div className="card-body text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-soft">
+                <span className="text-3xl">🎉</span>
+              </div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-3">
+                Welcome to Grocito!
+              </h3>
+              <p className="text-gray-700 mb-6 text-lg">
+                You're all set! Browse products, add them to cart, and place your order for quick delivery to{' '}
+                <span className="font-semibold bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-1 rounded-xl text-green-700 border border-green-200">
+                  {currentPincode}
+                </span>
+              </p>
+              <button
+                onClick={() => setShowGuide(true)}
+                className="bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white px-8 py-4 rounded-xl font-bold transform hover:scale-105 transition-all duration-300 shadow-soft hover:shadow-soft-lg"
+              >
+                Need help? View quick tour →
+              </button>
             </div>
-            <h3 className="text-2xl font-bold text-green-700 mb-3">
-              🎉 Welcome to Grocito!
-            </h3>
-            <p className="text-gray-700 mb-6 text-lg">
-              You're all set! Browse products, add them to cart, and place your order for quick delivery to <span className="font-semibold bg-yellow-200 px-2 py-1 rounded-full text-green-700">{pincode}</span>.
-            </p>
-            <button
-              onClick={() => setShowGuide(true)}
-              className="bg-yellow-400 hover:bg-yellow-500 text-green-700 px-8 py-4 rounded-xl font-bold transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              Need help? View quick tour →
-            </button>
           </div>
         )}
       </main>

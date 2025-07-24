@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../api/authService';
+import api from '../api/config';
 import { toast } from 'react-toastify';
 
 const LoginPage = () => {
@@ -30,9 +31,6 @@ const LoginPage = () => {
     setError('');
 
     try {
-      // EMERGENCY FIX: Create demo user directly for testing
-      console.log('EMERGENCY FIX: Creating demo user directly');
-      
       // Get the pincode that was entered on the landing page
       const userPincode = localStorage.getItem('pincode') || storedPincode;
       console.log('Using pincode from landing page:', userPincode);
@@ -49,24 +47,32 @@ const LoginPage = () => {
         return;
       }
       
-      // Create demo user data with the user's actual pincode
-      const demoUser = {
-        id: Date.now(),
-        email: formData.email,
-        fullName: formData.email.split('@')[0],
-        role: 'USER',
-        pincode: userPincode // Use the pincode entered by user
-      };
+      // Call the backend API to authenticate the user
+      console.log('Calling backend API for authentication');
+      const response = await api.post('/users/login', { 
+        email: formData.email, 
+        password: formData.password 
+      });
       
-      // Create demo token
-      const demoToken = 'demo-token-' + Date.now();
+      console.log('Login API response:', response);
       
-      // Store in localStorage (keep the existing pincode)
-      localStorage.setItem('token', demoToken);
-      localStorage.setItem('user', JSON.stringify(demoUser));
+      // Get user data from response
+      const userData = response.data;
       
-      console.log('Demo user created:', demoUser);
-      console.log('Demo token created:', demoToken);
+      // Create a token (since backend doesn't provide one)
+      const token = 'token-' + Date.now();
+      localStorage.setItem('token', token);
+      
+      // Store user data in localStorage
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Update the pincode in the user data if it's not already set
+      if (!userData.pincode && userPincode) {
+        userData.pincode = userPincode;
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+      
+      console.log('Login successful:', userData);
       
       // Show success toast
       toast.success('Login successful! 🎉', {
@@ -80,7 +86,7 @@ const LoginPage = () => {
         autoClose: 1000,
       });
       
-      // CRITICAL FIX: Use direct window.location.href for most reliable navigation
+      // Navigate to products page
       console.log('Redirecting to products page...');
       window.location.href = '/products';
     } catch (error) {
@@ -103,7 +109,7 @@ const LoginPage = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">G</span>
             </div>
             <span className="text-2xl font-bold text-gray-900">Grocito</span>
@@ -161,7 +167,7 @@ const LoginPage = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter your email"
             />
           </div>
@@ -173,7 +179,7 @@ const LoginPage = () => {
               </label>
               <Link 
                 to="/forgot-password" 
-                className="text-sm text-primary-500 hover:text-primary-600 font-medium"
+                className="text-sm text-green-500 hover:text-green-600 font-medium"
               >
                 Forgot Password?
               </Link>
@@ -184,7 +190,7 @@ const LoginPage = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter your password"
             />
           </div>
@@ -192,7 +198,7 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary-500 text-white py-3 rounded-lg hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-colors"
+            className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-colors"
           >
             {loading ? (
               <div className="flex items-center justify-center space-x-2">
@@ -210,7 +216,7 @@ const LoginPage = () => {
           <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</h3>
           <div className="text-xs text-gray-600 space-y-1">
             <div>Admin: admin@grocito.com / admin123</div>
-            <div>User: john@example.com / password123</div>
+            <div>User: test@example.com / password123</div>
           </div>
           
           {/* Debug buttons */}
@@ -259,7 +265,7 @@ const LoginPage = () => {
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-primary-500 hover:text-primary-600 font-medium">
+            <Link to="/signup" className="text-green-500 hover:text-green-600 font-medium">
               Sign up here
             </Link>
           </p>

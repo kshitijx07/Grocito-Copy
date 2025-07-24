@@ -8,6 +8,12 @@ import ProductsPage from './components/ProductsPage';
 import CartPage from './components/CartPage';
 import CheckoutPage from './components/CheckoutPage';
 import OrdersPage from './components/OrdersPage';
+import UserProfilePage from './components/UserProfilePage';
+import EnhancedCartPage from './components/EnhancedCartPage';
+import EnhancedCheckoutPage from './components/EnhancedCheckoutPage';
+import EnhancedOrdersPage from './components/EnhancedOrdersPage';
+import PaymentHistoryPage from './components/PaymentHistoryPage';
+import ModernDashboard from './components/ModernDashboard';
 import ServiceNotAvailable from './components/ServiceNotAvailable';
 import ProtectedRoute from './components/ProtectedRoute';
 // Debug components - Hidden for production
@@ -67,7 +73,9 @@ function App() {
           theme="light"
           toastStyle={{
             fontSize: '14px',
-            borderRadius: '8px',
+            borderRadius: '16px',
+            boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            fontWeight: '500',
           }}
         />
         <Routes>
@@ -95,6 +103,11 @@ function App() {
               <OrdersPage />
             </ProtectedRoute>
           } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <UserProfilePage />
+            </ProtectedRoute>
+          } />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/test-redirect" element={<TestRedirect />} />
           <Route path="/payment-success" element={
@@ -113,6 +126,26 @@ function App() {
           <Route path="/simple-cart" element={<SimpleWorkingCart />} />
           <Route path="/not-available" element={<ServiceNotAvailable />} />
           <Route path="/location-test" element={<LocationTest />} />
+          <Route path="/enhanced-cart" element={
+            <ProtectedRoute>
+              <EnhancedCartPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/enhanced-checkout" element={
+            <ProtectedRoute>
+              <EnhancedCheckoutPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/enhanced-orders" element={
+            <ProtectedRoute>
+              <EnhancedOrdersPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/payment-history" element={
+            <ProtectedRoute>
+              <PaymentHistoryPage />
+            </ProtectedRoute>
+          } />
         </Routes>
 
         {/* Debug components - remove in production */}

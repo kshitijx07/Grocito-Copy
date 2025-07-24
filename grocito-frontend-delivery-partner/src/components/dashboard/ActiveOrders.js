@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
+import { 
+  ArchiveBoxIcon, 
+  TruckIcon, 
+  CheckCircleIcon, 
+  MapPinIcon, 
+  UserIcon, 
+  PhoneIcon,
+  ClipboardDocumentListIcon,
+  CurrencyDollarIcon 
+} from '@heroicons/react/24/outline';
+import PaymentManagement from '../payment/PaymentManagement';
 
-const ActiveOrders = ({ orders, onUpdateStatus, loading }) => {
+const ActiveOrders = ({ orders, onUpdateStatus, loading, onRefreshOrders }) => {
   const [updatingOrder, setUpdatingOrder] = useState(null);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
@@ -27,14 +38,34 @@ const ActiveOrders = ({ orders, onUpdateStatus, loading }) => {
     }
   };
 
-  const getNextAction = (status) => {
+  const getNextAction = (status, order) => {
+    console.log('🔍 getNextAction - Order:', order.id, 'Status:', status, 'PaymentMethod:', order.paymentMethod, 'PaymentStatus:', order.paymentStatus);
+    
     switch (status) {
       case 'ASSIGNED':
-        return { action: 'PICKED_UP', label: 'Mark as Picked Up', icon: '📦' };
+        return { action: 'PICKED_UP', label: 'Mark as Picked Up', icon: <ArchiveBoxIcon className="h-4 w-4" />, enabled: true };
       case 'PICKED_UP':
-        return { action: 'OUT_FOR_DELIVERY', label: 'Start Delivery', icon: '🚚' };
+        return { action: 'OUT_FOR_DELIVERY', label: 'Start Delivery', icon: <TruckIcon className="h-4 w-4" />, enabled: true };
       case 'OUT_FOR_DELIVERY':
-        return { action: 'DELIVERED', label: 'Mark as Delivered', icon: '✅' };
+        // CRITICAL: For COD orders, MUST collect payment before delivery completion
+        const isCODOrder = order.paymentMethod === 'COD' || !order.paymentMethod; // Default to COD if not specified
+        const isPaymentPending = order.paymentStatus === 'PENDING' || !order.paymentStatus; // Default to PENDING if not specified
+        
+        console.log('🔍 Delivery Check - isCODOrder:', isCODOrder, 'isPaymentPending:', isPaymentPending);
+        
+        if (isCODOrder && isPaymentPending) {
+          console.log('🚫 BLOCKING DELIVERY - Payment not collected for COD order');
+          return { 
+            action: 'DELIVERED', 
+            label: 'Collect Payment First', 
+            icon: <CurrencyDollarIcon className="h-4 w-4" />, 
+            enabled: false,
+            reason: 'COD payment must be collected before marking as delivered. Use the payment collection interface below.'
+          };
+        }
+        
+        console.log('✅ ALLOWING DELIVERY - Payment collected or online order');
+        return { action: 'DELIVERED', label: 'Mark as Delivered', icon: <CheckCircleIcon className="h-4 w-4" />, enabled: true };
       default:
         return null;
     }
@@ -80,9 +111,7 @@ const ActiveOrders = ({ orders, onUpdateStatus, loading }) => {
         {orders.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+              <ClipboardDocumentListIcon className="w-8 h-8 text-gray-400" />
             </div>
             <h4 className="text-lg font-medium text-gray-900 mb-2">No Active Orders</h4>
             <p className="text-gray-600">Your accepted orders will appear here</p>
@@ -90,7 +119,7 @@ const ActiveOrders = ({ orders, onUpdateStatus, loading }) => {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => {
-              const nextAction = getNextAction(order.status);
+              const nextAction = getNextAction(order.status, order);
               const isUpdating = updatingOrder === order.id;
               
               return (
@@ -108,24 +137,20 @@ const ActiveOrders = ({ orders, onUpdateStatus, loading }) => {
                       
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
+                          <MapPinIcon className="w-4 h-4 text-gray-400" />
                           <span className="text-sm text-gray-700">{formatAddress(order.deliveryAddress)}</span>
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
+                          <UserIcon className="w-4 h-4 text-gray-400" />
                           <span className="text-sm text-gray-700">{order.user?.fullName || 'Customer'}</span>
                           {order.user?.contactNumber && (
                             <a 
                               href={`tel:${order.user.contactNumber}`}
-                              className="text-blue-600 hover:text-blue-800 text-sm ml-2"
+                              className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center space-x-1"
                             >
-                              📞 Call
+                              <PhoneIcon className="w-4 h-4" />
+                              <span>Call</span>
                             </a>
                           )}
                         </div>
@@ -138,27 +163,33 @@ const ActiveOrders = ({ orders, onUpdateStatus, loading }) => {
                       </div>
                       
                       {nextAction && (
-                        <button
-                          onClick={() => handleStatusUpdate(order.id, nextAction.action)}
-                          disabled={isUpdating || loading}
-                          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                            isUpdating
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
-                          }`}
-                        >
-                          {isUpdating ? (
-                            <div className="flex items-center space-x-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              <span>Updating...</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center space-x-2">
-                              <span>{nextAction.icon}</span>
-                              <span>{nextAction.label}</span>
-                            </div>
+                        <div>
+                          <button
+                            onClick={() => nextAction.enabled && handleStatusUpdate(order.id, nextAction.action)}
+                            disabled={isUpdating || loading || !nextAction.enabled}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                              isUpdating || !nextAction.enabled
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
+                            }`}
+                            title={!nextAction.enabled ? nextAction.reason : ''}
+                          >
+                            {isUpdating ? (
+                              <div className="flex items-center space-x-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span>Updating...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <span>{nextAction.icon}</span>
+                                <span>{nextAction.label}</span>
+                              </div>
+                            )}
+                          </button>
+                          {!nextAction.enabled && nextAction.reason && (
+                            <p className="text-xs text-red-600 mt-1">{nextAction.reason}</p>
                           )}
-                        </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -205,6 +236,18 @@ const ActiveOrders = ({ orders, onUpdateStatus, loading }) => {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Payment Management for COD Orders */}
+                  <PaymentManagement 
+                    order={order} 
+                    onPaymentUpdate={(updatedOrder) => {
+                      console.log('Payment updated for order:', updatedOrder.id);
+                      // Call the refresh callback from parent component
+                      if (onRefreshOrders) {
+                        onRefreshOrders();
+                      }
+                    }} 
+                  />
                   
                   {/* Emergency Actions */}
                   <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">

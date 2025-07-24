@@ -6,6 +6,7 @@ import com.example.Grocito.Entity.Order;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserId(Long userId);
+    List<Order> findByUserIdOrderByOrderTimeDesc(Long userId);
     List<Order> findByPincode(String pincode);
     List<Order> findByStatus(String status);
     List<Order> findByPincodeAndStatus(String pincode, String status);

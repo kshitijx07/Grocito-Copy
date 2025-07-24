@@ -70,7 +70,9 @@ public class OrderController {
     @PostMapping("/place-from-cart")
     public ResponseEntity<?> placeOrderFromCart(
             @RequestParam Long userId,
-            @RequestParam String deliveryAddress) {
+            @RequestParam String deliveryAddress,
+            @RequestParam(defaultValue = "COD") String paymentMethod,
+            @RequestParam(required = false) String paymentId) {
         logger.info("Received request to place order from cart for user ID: {}", userId);
         try {
             // Validate input parameters
@@ -97,7 +99,7 @@ public class OrderController {
                 return ResponseEntity.badRequest().body("User must have a valid pincode in their profile for delivery. Please update your profile.");
             }
             
-            Order savedOrder = orderService.placeOrderFromCart(userId, deliveryAddress.trim());
+            Order savedOrder = orderService.placeOrderFromCart(userId, deliveryAddress.trim(), paymentMethod, paymentId);
             
             // Notify available delivery partners in the same pincode
             logger.info("Order {} placed successfully. Notifying delivery partners in pincode {}", 
@@ -394,6 +396,75 @@ public class OrderController {
             return ResponseEntity.ok(cancelledOrder);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Update payment status for COD orders (Delivery Partner function)
+     */
+    @PutMapping("/{id}/payment")
+    public ResponseEntity<?> updatePaymentStatus(
+            @PathVariable Long id,
+            @RequestParam String actualPaymentMethod,
+            @RequestParam(required = false) String paymentId,
+            @RequestParam(required = false) String paymentNotes) {
+        try {
+            logger.info("Updating payment status for order ID: {} with method: {}", id, actualPaymentMethod);
+            
+            Order updatedOrder = orderService.updatePaymentStatus(id, actualPaymentMethod, paymentId, paymentNotes);
+            return ResponseEntity.ok(updatedOrder);
+        } catch (RuntimeException e) {
+            logger.error("Error updating payment status for order ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Get payment history for a user
+     */
+    @GetMapping("/user/{userId}/payment-history")
+    public ResponseEntity<?> getPaymentHistory(@PathVariable Long userId) {
+        try {
+            logger.info("Fetching payment history for user ID: {}", userId);
+            
+            List<Map<String, Object>> paymentHistory = orderService.getPaymentHistory(userId);
+            logger.info("Successfully fetched {} payment records for user ID: {}", paymentHistory.size(), userId);
+            return ResponseEntity.ok(paymentHistory);
+        } catch (RuntimeException e) {
+            logger.error("Error fetching payment history for user ID {}: {}", userId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Create Razorpay order for digital payment collection
+     */
+    @PostMapping("/{id}/create-razorpay-order")
+    public ResponseEntity<?> createRazorpayOrder(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        try {
+            logger.info("Creating Razorpay order for order ID: {}", id);
+            
+            Map<String, Object> razorpayOrder = orderService.createRazorpayOrder(id, request);
+            return ResponseEntity.ok(razorpayOrder);
+        } catch (RuntimeException e) {
+            logger.error("Error creating Razorpay order for order ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Verify Razorpay payment and update order status
+     */
+    @PostMapping("/{id}/verify-payment")
+    public ResponseEntity<?> verifyRazorpayPayment(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        try {
+            logger.info("Verifying Razorpay payment for order ID: {}", id);
+            
+            Order updatedOrder = orderService.verifyRazorpayPayment(id, request);
+            return ResponseEntity.ok(updatedOrder);
+        } catch (RuntimeException e) {
+            logger.error("Error verifying Razorpay payment for order ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
     

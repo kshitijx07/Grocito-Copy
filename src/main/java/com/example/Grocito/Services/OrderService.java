@@ -109,7 +109,7 @@ public class OrderService {
      * Place an order from user's cart
      */
     @Transactional
-    public Order placeOrderFromCart(Long userId, String deliveryAddress) {
+    public Order placeOrderFromCart(Long userId, String deliveryAddress, String paymentMethod, String paymentId) {
         logger.info("Processing order from cart for user ID: {}", userId);
         
         // Get user's cart
@@ -137,6 +137,23 @@ public class OrderService {
         order.setOrderTime(LocalDateTime.now());
         order.setStatus("PLACED");
         order.setDeliveryAddress(deliveryAddress);
+        
+        // Set payment information
+        logger.debug("Setting payment method: {} for order", paymentMethod);
+        order.setPaymentMethod(paymentMethod != null ? paymentMethod : "COD");
+        
+        if ("ONLINE".equals(paymentMethod) && paymentId != null) {
+            order.setPaymentStatus("PAID");
+            order.setPaymentId(paymentId);
+            order.setActualPaymentMethod("ONLINE");
+            order.setPaymentCompletedAt(LocalDateTime.now());
+            logger.debug("Online payment configured with ID: {}", paymentId);
+        } else {
+            // COD orders start as PENDING payment
+            order.setPaymentStatus("PENDING");
+            order.setActualPaymentMethod(null); // Will be set by delivery partner
+            logger.debug("COD payment configured - payment pending until delivery");
+        }
         
         // Set pincode from user's profile if not provided in the order
         logger.debug("Setting pincode for delivery from user profile");
@@ -229,7 +246,7 @@ public class OrderService {
     }
     
     /**
-     * Update order status
+     * Update order status with COD payment validation
      */
     @Transactional
     public Order updateOrderStatus(Long orderId, String status) {
@@ -239,6 +256,27 @@ public class OrderService {
                     logger.error("Status update failed: Order not found with ID: {}", orderId);
                     return new RuntimeException("Order not found with id: " + orderId);
                 });
+        
+        // CRITICAL SECURITY CHECK: Prevent marking COD orders as delivered without payment collection
+        if ("DELIVERED".equals(status)) {
+            logger.debug("Validating delivery completion for order ID: {}", orderId);
+            
+            // Check if this is a COD order
+            boolean isCODOrder = "COD".equals(order.getPaymentMethod()) || order.getPaymentMethod() == null;
+            boolean isPaymentPending = "PENDING".equals(order.getPaymentStatus()) || order.getPaymentStatus() == null;
+            
+            logger.debug("Order {} - PaymentMethod: {}, PaymentStatus: {}, isCOD: {}, isPending: {}", 
+                        orderId, order.getPaymentMethod(), order.getPaymentStatus(), isCODOrder, isPaymentPending);
+            
+            if (isCODOrder && isPaymentPending) {
+                logger.warn("SECURITY VIOLATION: Attempt to mark COD order {} as delivered without payment collection", orderId);
+                throw new RuntimeException("Cannot mark COD order as delivered without collecting payment. Please collect payment first using the payment collection interface.");
+            }
+            
+            // Set delivery timestamp for successful deliveries
+            order.setDeliveredAt(LocalDateTime.now());
+            logger.info("Setting delivery timestamp for order ID: {}", orderId);
+        }
         
         logger.debug("Changing order status from '{}' to '{}' for order ID: {}", 
                 order.getStatus(), status, orderId);
@@ -281,6 +319,222 @@ public class OrderService {
         Order cancelledOrder = orderRepository.save(order);
         logger.info("Order successfully cancelled for order ID: {}", orderId);
         return cancelledOrder;
+    }
+    
+    /**
+     * Update payment status for COD orders (called by delivery partner)
+     */
+    @Transactional
+    public Order updatePaymentStatus(Long orderId, String actualPaymentMethod, String paymentId, String paymentNotes) {
+        logger.info("Updating payment status for order ID: {} with method: {}", orderId, actualPaymentMethod);
+        
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> {
+                    logger.error("Payment update failed: Order not found with ID: {}", orderId);
+                    return new RuntimeException("Order not found with id: " + orderId);
+                });
+        
+        // Validate that this is a COD order
+        if (!"COD".equals(order.getPaymentMethod())) {
+            logger.warn("Payment update rejected: Order ID: {} is not a COD order", orderId);
+            throw new RuntimeException("Payment status can only be updated for COD orders");
+        }
+        
+        // Validate payment method
+        if (!isValidPaymentMethod(actualPaymentMethod)) {
+            logger.warn("Payment update rejected: Invalid payment method: {}", actualPaymentMethod);
+            throw new RuntimeException("Invalid payment method. Allowed values: CASH, UPI, CARD");
+        }
+        
+        // Update payment information
+        logger.debug("Updating payment details for order ID: {}", orderId);
+        order.setActualPaymentMethod(actualPaymentMethod);
+        order.setPaymentStatus("PAID");
+        order.setPaymentCompletedAt(LocalDateTime.now());
+        
+        if (paymentId != null && !paymentId.trim().isEmpty()) {
+            order.setPaymentId(paymentId.trim());
+        }
+        
+        if (paymentNotes != null && !paymentNotes.trim().isEmpty()) {
+            order.setPaymentNotes(paymentNotes.trim());
+        }
+        
+        Order updatedOrder = orderRepository.save(order);
+        logger.info("Payment status updated successfully for order ID: {} - Method: {}, Status: PAID", 
+                   orderId, actualPaymentMethod);
+        
+        return updatedOrder;
+    }
+    
+    /**
+     * Get payment history for a user
+     */
+    public List<Map<String, Object>> getPaymentHistory(Long userId) {
+        logger.info("Fetching payment history for user ID: {}", userId);
+        
+        // Validate user exists
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    logger.error("Payment history fetch failed: User not found with ID: {}", userId);
+                    return new RuntimeException("User not found with id: " + userId);
+                });
+        
+        // Get all orders for the user
+        List<Order> orders = orderRepository.findByUserIdOrderByOrderTimeDesc(userId);
+        logger.debug("Found {} orders for user ID: {}", orders.size(), userId);
+        
+        // Convert to payment history format
+        List<Map<String, Object>> paymentHistory = new ArrayList<>();
+        
+        for (Order order : orders) {
+            Map<String, Object> paymentRecord = new HashMap<>();
+            paymentRecord.put("orderId", order.getId());
+            paymentRecord.put("orderTime", order.getOrderTime());
+            paymentRecord.put("totalAmount", order.getTotalAmount());
+            paymentRecord.put("paymentMethod", order.getPaymentMethod());
+            paymentRecord.put("paymentStatus", order.getPaymentStatus());
+            paymentRecord.put("actualPaymentMethod", order.getActualPaymentMethod());
+            paymentRecord.put("paymentId", order.getPaymentId());
+            paymentRecord.put("paymentCompletedAt", order.getPaymentCompletedAt());
+            paymentRecord.put("paymentNotes", order.getPaymentNotes());
+            paymentRecord.put("orderStatus", order.getStatus());
+            
+            // Add user-friendly payment description
+            String paymentDescription = getPaymentDescription(order);
+            paymentRecord.put("paymentDescription", paymentDescription);
+            
+            paymentHistory.add(paymentRecord);
+        }
+        
+        logger.info("Payment history retrieved successfully for user ID: {} - {} records", userId, paymentHistory.size());
+        return paymentHistory;
+    }
+    
+    /**
+     * Helper method to validate payment methods
+     */
+    private boolean isValidPaymentMethod(String paymentMethod) {
+        return paymentMethod != null && 
+               (paymentMethod.equals("CASH") || paymentMethod.equals("UPI") || paymentMethod.equals("CARD"));
+    }
+    
+    /**
+     * Helper method to generate user-friendly payment descriptions
+     */
+    private String getPaymentDescription(Order order) {
+        if ("ONLINE".equals(order.getPaymentMethod())) {
+            return "Paid Online";
+        } else if ("COD".equals(order.getPaymentMethod())) {
+            if ("PAID".equals(order.getPaymentStatus())) {
+                String method = order.getActualPaymentMethod();
+                if ("CASH".equals(method)) {
+                    return "Paid by Cash on Delivery";
+                } else if ("UPI".equals(method)) {
+                    return "Paid by UPI on Delivery";
+                } else if ("CARD".equals(method)) {
+                    return "Paid by Card on Delivery";
+                } else {
+                    return "Paid on Delivery";
+                }
+            } else {
+                return "Cash on Delivery - Payment Pending";
+            }
+        }
+        return "Unknown Payment Method";
+    }
+    
+    /**
+     * Create Razorpay order for digital payment collection
+     */
+    public Map<String, Object> createRazorpayOrder(Long orderId, Map<String, Object> request) {
+        logger.info("Creating Razorpay order for order ID: {}", orderId);
+        
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> {
+                    logger.error("Razorpay order creation failed: Order not found with ID: {}", orderId);
+                    return new RuntimeException("Order not found with id: " + orderId);
+                });
+        
+        // Validate that this is a COD order
+        if (!"COD".equals(order.getPaymentMethod())) {
+            logger.warn("Razorpay order creation rejected: Order ID: {} is not a COD order", orderId);
+            throw new RuntimeException("Razorpay orders can only be created for COD orders");
+        }
+        
+        try {
+            // For now, create a mock Razorpay order response
+            // In production, you would integrate with actual Razorpay API
+            Map<String, Object> razorpayOrder = new HashMap<>();
+            razorpayOrder.put("id", "order_" + orderId + "_" + System.currentTimeMillis());
+            razorpayOrder.put("amount", ((Number) request.get("amount")).intValue());
+            razorpayOrder.put("currency", request.get("currency"));
+            razorpayOrder.put("status", "created");
+            
+            logger.info("Razorpay order created successfully for order ID: {}", orderId);
+            return razorpayOrder;
+            
+        } catch (Exception e) {
+            logger.error("Error creating Razorpay order for order ID {}: {}", orderId, e.getMessage());
+            throw new RuntimeException("Failed to create Razorpay order: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Verify Razorpay payment and update order status
+     */
+    @Transactional
+    public Order verifyRazorpayPayment(Long orderId, Map<String, Object> request) {
+        logger.info("Verifying Razorpay payment for order ID: {}", orderId);
+        
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> {
+                    logger.error("Payment verification failed: Order not found with ID: {}", orderId);
+                    return new RuntimeException("Order not found with id: " + orderId);
+                });
+        
+        // Validate that this is a COD order
+        if (!"COD".equals(order.getPaymentMethod())) {
+            logger.warn("Payment verification rejected: Order ID: {} is not a COD order", orderId);
+            throw new RuntimeException("Payment verification can only be done for COD orders");
+        }
+        
+        try {
+            // Extract payment details from request
+            String razorpayOrderId = (String) request.get("razorpay_order_id");
+            String razorpayPaymentId = (String) request.get("razorpay_payment_id");
+            String razorpaySignature = (String) request.get("razorpay_signature");
+            String paymentNotes = (String) request.get("paymentNotes");
+            
+            // In production, you would verify the signature with Razorpay
+            // For now, we'll assume the payment is valid if all required fields are present
+            if (razorpayOrderId == null || razorpayPaymentId == null || razorpaySignature == null) {
+                throw new RuntimeException("Invalid payment response from Razorpay");
+            }
+            
+            // Update payment information
+            logger.debug("Updating payment details for order ID: {}", orderId);
+            order.setActualPaymentMethod("UPI"); // Default to UPI for digital payments
+            order.setPaymentStatus("PAID");
+            order.setPaymentId(razorpayPaymentId);
+            order.setPaymentCompletedAt(LocalDateTime.now());
+            
+            if (paymentNotes != null && !paymentNotes.trim().isEmpty()) {
+                order.setPaymentNotes(paymentNotes.trim());
+            } else {
+                order.setPaymentNotes("Digital payment via Razorpay - Payment ID: " + razorpayPaymentId);
+            }
+            
+            Order updatedOrder = orderRepository.save(order);
+            logger.info("Razorpay payment verified and updated successfully for order ID: {} - Payment ID: {}", 
+                       orderId, razorpayPaymentId);
+            
+            return updatedOrder;
+            
+        } catch (Exception e) {
+            logger.error("Error verifying Razorpay payment for order ID {}: {}", orderId, e.getMessage());
+            throw new RuntimeException("Payment verification failed: " + e.getMessage());
+        }
     }
     
     /**

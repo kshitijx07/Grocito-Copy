@@ -24,6 +24,16 @@ public class Order {
     private double totalAmount;
     private double deliveryFee; // Delivery fee for the partner
     private double partnerEarning; // Partner's earning from this order
+    
+    // Payment Management Fields
+    private String paymentMethod; // ONLINE, COD
+    private String paymentStatus; // PENDING, PAID, FAILED
+    private String actualPaymentMethod; // For COD: CASH, UPI, CARD (what customer actually paid with)
+    private String paymentId; // Transaction ID for online payments
+    private LocalDateTime paymentCompletedAt; // When payment was actually completed
+    private String paymentNotes; // Additional payment notes
+    
+    // Delivery Timeline Fields
     private LocalDateTime assignedAt;
     private LocalDateTime pickedUpAt;
     private LocalDateTime deliveredAt;
@@ -181,6 +191,55 @@ public class Order {
 
 	public void setCancelledAt(LocalDateTime cancelledAt) {
 		this.cancelledAt = cancelledAt;
+	}
+
+	// Payment Management Getters & Setters
+	public String getPaymentMethod() {
+		return paymentMethod;
+	}
+
+	public void setPaymentMethod(String paymentMethod) {
+		this.paymentMethod = paymentMethod;
+	}
+
+	public String getPaymentStatus() {
+		return paymentStatus;
+	}
+
+	public void setPaymentStatus(String paymentStatus) {
+		this.paymentStatus = paymentStatus;
+	}
+
+	public String getActualPaymentMethod() {
+		return actualPaymentMethod;
+	}
+
+	public void setActualPaymentMethod(String actualPaymentMethod) {
+		this.actualPaymentMethod = actualPaymentMethod;
+	}
+
+	public String getPaymentId() {
+		return paymentId;
+	}
+
+	public void setPaymentId(String paymentId) {
+		this.paymentId = paymentId;
+	}
+
+	public LocalDateTime getPaymentCompletedAt() {
+		return paymentCompletedAt;
+	}
+
+	public void setPaymentCompletedAt(LocalDateTime paymentCompletedAt) {
+		this.paymentCompletedAt = paymentCompletedAt;
+	}
+
+	public String getPaymentNotes() {
+		return paymentNotes;
+	}
+
+	public void setPaymentNotes(String paymentNotes) {
+		this.paymentNotes = paymentNotes;
 	}
 
 	@Override

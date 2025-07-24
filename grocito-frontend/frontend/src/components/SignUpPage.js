@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../api/authService';
+import api from '../api/config';
 import { toast } from 'react-toastify';
 
 const SignUpPage = () => {
@@ -81,7 +82,10 @@ const SignUpPage = () => {
       };
 
       console.log('Registering user:', userData);
-      await authService.register(userData);
+      
+      // Call the backend API directly to register the user
+      const registerResponse = await api.post('/users/register', userData);
+      console.log('Registration response:', registerResponse);
       
       // Show success toast
       toast.success('Account created successfully! 🎉', {
@@ -102,46 +106,55 @@ const SignUpPage = () => {
       }, 1000);
       
       console.log('Auto-logging in user');
-      await authService.login(formData.email, formData.password);
       
-      // Store pincode if provided
-      if (userData.pincode) {
+      // Call the backend API directly to login the user
+      const loginResponse = await api.post('/users/login', {
+        email: formData.email,
+        password: formData.password
+      });
+      
+      console.log('Login response:', loginResponse);
+      
+      // Get user data from response
+      const loggedInUserData = loginResponse.data;
+      
+      // Create a token (since backend doesn't provide one)
+      const token = 'token-' + Date.now();
+      localStorage.setItem('token', token);
+      
+      // Store user data in localStorage
+      localStorage.setItem('user', JSON.stringify(loggedInUserData));
+      
+      // Keep the landing page pincode - DON'T override with user profile pincode
+      const landingPagePincode = localStorage.getItem('pincode');
+      if (landingPagePincode) {
+        console.log('Keeping landing page pincode:', landingPagePincode);
+        // Don't override - keep the pincode from landing page
+      } else if (userData.pincode) {
+        // Only set user's pincode if no landing page pincode exists
         localStorage.setItem('pincode', userData.pincode);
-        console.log('Pincode stored, redirecting to products');
-        
-        setTimeout(() => {
-          toast.success('Welcome to Grocito! 🛒', {
-            position: "bottom-right",
-            autoClose: 2000,
-          });
-        }, 2000);
-        
-        // Add delay before navigation for better user experience
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-        }, 3000); // 3 seconds delay
-      } else {
-        console.log('No pincode, redirecting to dashboard for proper routing');
-        
-        setTimeout(() => {
-          toast.info('Please select your delivery location', {
-            position: "bottom-right",
-            autoClose: 2000,
-          });
-        }, 2000);
-        
-        // Add delay before navigation for better user experience
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-        }, 3000); // 3 seconds delay
+        console.log('No landing page pincode, using user profile pincode:', userData.pincode);
       }
+      console.log('Final pincode for delivery:', localStorage.getItem('pincode'));
+      
+      setTimeout(() => {
+        toast.success('Welcome to Grocito! 🛒', {
+          position: "bottom-right",
+          autoClose: 2000,
+        });
+      }, 2000);
+      
+      // Add delay before navigation for better user experience
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 3000); // 3 seconds delay
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error(error.message || 'Registration failed. Please try again.', {
+      toast.error(error.response?.data || error.message || 'Registration failed. Please try again.', {
         position: "bottom-right",
         autoClose: 4000,
       });
-      setError(error.message);
+      setError(error.response?.data || error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -161,7 +174,7 @@ const SignUpPage = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">G</span>
             </div>
             <span className="text-2xl font-bold text-gray-900">Grocito</span>
@@ -219,7 +232,7 @@ const SignUpPage = () => {
               value={formData.fullName}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter your full name"
             />
           </div>
@@ -234,7 +247,7 @@ const SignUpPage = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter your email"
             />
           </div>
@@ -250,7 +263,7 @@ const SignUpPage = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Password"
               />
             </div>
@@ -264,7 +277,7 @@ const SignUpPage = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Confirm"
               />
             </div>
@@ -279,7 +292,7 @@ const SignUpPage = () => {
               name="contactNumber"
               value={formData.contactNumber}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter 10-digit mobile number"
               maxLength="10"
             />
@@ -294,7 +307,7 @@ const SignUpPage = () => {
               name="pincode"
               value={formData.pincode}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter your pincode"
               maxLength="6"
             />
@@ -309,7 +322,7 @@ const SignUpPage = () => {
               value={formData.address}
               onChange={handleChange}
               rows="2"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
               placeholder="Enter your complete address"
             />
           </div>
@@ -317,7 +330,7 @@ const SignUpPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary-500 text-white py-3 rounded-lg hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-colors"
+            className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-colors"
           >
             {loading ? (
               <div className="flex items-center justify-center space-x-2">
@@ -334,7 +347,7 @@ const SignUpPage = () => {
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-primary-500 hover:text-primary-600 font-medium">
+            <Link to="/login" className="text-green-500 hover:text-green-600 font-medium">
               Sign in here
             </Link>
           </p>

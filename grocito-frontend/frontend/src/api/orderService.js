@@ -136,16 +136,71 @@ export const orderService = {
         };
       }
       
-      const requestData = {
-        userId,
-        deliveryAddress,
-        paymentMethod,
-        ...(paymentInfo && { paymentInfo })
-      };
+      // CRITICAL FIX: Sync frontend cart with backend before placing order
+      console.log('Syncing frontend cart with backend before placing order...');
+      
+      try {
+        // Get cart items from frontend (localStorage/mock)
+        const { cartService } = await import('./cartService');
+        const frontendCartItems = await cartService.getCartItems(userId);
+        console.log('Frontend cart items:', frontendCartItems);
+        
+        if (!frontendCartItems || frontendCartItems.length === 0) {
+          throw new Error('Your cart is empty. Please add items to your cart before placing an order.');
+        }
+        
+        // Clear any existing backend cart and sync with frontend cart
+        try {
+          await api.delete(`/cart/clear/${userId}`);
+          console.log('Cleared existing backend cart');
+        } catch (clearError) {
+          console.log('No existing backend cart to clear (this is normal)');
+        }
+        
+        // Add each frontend cart item to backend cart
+        for (const item of frontendCartItems) {
+          console.log(`Syncing item: ${item.product.name} (ID: ${item.product.id}), quantity: ${item.quantity}`);
+          
+          try {
+            await api.post('/cart/add', {
+              userId: Number(userId),
+              productId: Number(item.product.id),
+              quantity: Number(item.quantity)
+            });
+            console.log(`Successfully synced item: ${item.product.name}`);
+          } catch (syncError) {
+            console.error(`Failed to sync item ${item.product.name}:`, syncError);
+          }
+        }
+        
+        console.log('Cart sync completed successfully');
+      } catch (syncError) {
+        console.error('Cart sync failed:', syncError);
+        // If sync fails, we can still try to place the order
+      }
+      
+      // Backend expects userId and deliveryAddress as request parameters, not in body
+      // Based on OrderController.java: @RequestParam Long userId, @RequestParam String deliveryAddress
+      const params = new URLSearchParams({
+        userId: String(userId), // Ensure userId is converted to string for URL params
+        deliveryAddress: String(deliveryAddress).trim()
+      });
 
-      console.log('Order request data:', requestData);
-      const response = await api.post('/orders/place-from-cart', requestData);
+      console.log('Order request params:', params.toString());
+      const response = await api.post(`/orders/place-from-cart?${params.toString()}`);
       console.log('Order response:', response.data);
+      
+      // CRITICAL FIX: Clear cart after successful order placement
+      try {
+        console.log('Order placed successfully, clearing cart...');
+        const { cartService } = await import('./cartService');
+        await cartService.clearCart(userId);
+        console.log('✅ Cart cleared successfully after order placement');
+      } catch (clearError) {
+        console.error('❌ Failed to clear cart after order placement:', clearError);
+        // Don't fail the order if cart clearing fails, just log it
+      }
+      
       return response.data;
     } catch (error) {
       console.warn('Error placing order, falling back to mock success response');
@@ -197,6 +252,7 @@ export const orderService = {
         return mockOrders.filter(order => order.userId === userId);
       }
       
+      // URL follows same pattern as user profile: /users/{id} -> /orders/user/{userId}
       const response = await api.get(`/orders/user/${userId}`);
       console.log('User orders response:', response.data);
       return response.data;
@@ -283,6 +339,57 @@ export const orderService = {
       return response.data;
     } catch (error) {
       return handleApiError(error, 'Failed to track order');
+    }
+  },
+
+  // Cancel order and restore items to cart
+  cancelOrder: async (orderId) => {
+    try {
+      console.log(`Cancelling order: orderId=${orderId}`);
+      
+      // First, get the order details to retrieve the items
+      const orderDetails = await api.get(`/orders/${orderId}`);
+      console.log('Order details before cancellation:', orderDetails.data);
+      
+      const order = orderDetails.data;
+      const userId = order.user.id;
+      
+      // Cancel the order in backend
+      const response = await api.put(`/orders/${orderId}/cancel`);
+      console.log('Cancel order response:', response.data);
+      
+      // CRITICAL FIX: Restore cancelled order items back to cart
+      try {
+        console.log('Order cancelled successfully, restoring items to cart...');
+        const { cartService } = await import('./cartService');
+        
+        // Add each cancelled order item back to the cart
+        for (const orderItem of order.items) {
+          console.log(`Restoring item to cart: ${orderItem.product.name} (ID: ${orderItem.product.id}), quantity: ${orderItem.quantity}`);
+          
+          try {
+            await cartService.addToCart(
+              userId, 
+              orderItem.product.id, 
+              orderItem.quantity, 
+              orderItem.product
+            );
+            console.log(`✅ Successfully restored ${orderItem.product.name} to cart`);
+          } catch (addError) {
+            console.error(`❌ Failed to restore ${orderItem.product.name} to cart:`, addError);
+            // Continue with other items even if one fails
+          }
+        }
+        
+        console.log('✅ All cancelled order items restored to cart successfully');
+      } catch (restoreError) {
+        console.error('❌ Failed to restore items to cart after cancellation:', restoreError);
+        // Don't fail the cancellation if cart restoration fails, just log it
+      }
+      
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to cancel order');
     }
   }
 };

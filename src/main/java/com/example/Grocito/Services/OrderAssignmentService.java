@@ -249,6 +249,19 @@ public class OrderAssignmentService {
                 if (!"OUT_FOR_DELIVERY".equals(oldStatus)) {
                     throw new RuntimeException("Can only deliver orders that are out for delivery");
                 }
+                
+                // CRITICAL SECURITY CHECK: Prevent marking COD orders as delivered without payment collection
+                boolean isCODOrder = "COD".equals(order.getPaymentMethod()) || order.getPaymentMethod() == null;
+                boolean isPaymentPending = "PENDING".equals(order.getPaymentStatus()) || order.getPaymentStatus() == null;
+                
+                logger.debug("Delivery validation for order {} - PaymentMethod: {}, PaymentStatus: {}, isCOD: {}, isPending: {}", 
+                            orderId, order.getPaymentMethod(), order.getPaymentStatus(), isCODOrder, isPaymentPending);
+                
+                if (isCODOrder && isPaymentPending) {
+                    logger.warn("SECURITY VIOLATION: Partner {} attempted to mark COD order {} as delivered without payment collection", partnerId, orderId);
+                    throw new RuntimeException("Cannot mark COD order as delivered without collecting payment. Please collect payment first using the payment collection interface.");
+                }
+                
                 order.setDeliveredAt(LocalDateTime.now());
                 
                 // Check if partner now has less than 2 active orders, make them available again

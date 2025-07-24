@@ -8,15 +8,17 @@ const FloatingCartButton = ({ cartCount = 0, show = true }) => {
 
   return (
     <button
-      onClick={() => navigate('/cart')}
-      className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 via-yellow-400 to-blue-600 hover:from-blue-600 hover:via-yellow-500 hover:to-blue-700 text-white rounded-full p-5 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 z-40 animate-bounce border-4 border-white"
+      onClick={() => navigate('/enhanced-cart')}
+      className="floating-cart p-6 z-40 animate-bounce"
       title="View Cart"
     >
       <div className="relative">
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6m0 0h15M17 21a2 2 0 100-4 2 2 0 000 4zM9 21a2 2 0 100-4 2 2 0 000 4z" />
-        </svg>
-        <span className="absolute -top-3 -right-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white text-sm font-bold rounded-full h-7 w-7 flex items-center justify-center animate-pulse shadow-lg border-2 border-white">
+        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-soft">
+          <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6m0 0h15M17 21a2 2 0 100-4 2 2 0 000 4zM9 21a2 2 0 100-4 2 2 0 000 4z" />
+          </svg>
+        </div>
+        <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm font-bold rounded-full h-8 w-8 flex items-center justify-center animate-pulse shadow-soft border-2 border-white">
           {cartCount > 99 ? '99+' : cartCount}
         </span>
       </div>

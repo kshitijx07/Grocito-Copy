@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import StatsCards from '../../components/dashboard/StatsCards';
-import ActiveOrders from '../../components/dashboard/ActiveOrders';
-import AvailableOrders from '../../components/dashboard/AvailableOrders';
-import RecentActivity from '../../components/dashboard/RecentActivity';
-import AvailabilityToggle from '../../components/common/AvailabilityToggle';
-import dashboardAPI from '../../services/dashboardAPI';
-import ordersAPI from '../../services/ordersAPI';
+import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import StatsCards from "../../components/dashboard/StatsCards";
+import ActiveOrders from "../../components/dashboard/ActiveOrders";
+import AvailableOrders from "../../components/dashboard/AvailableOrders";
+import RecentActivity from "../../components/dashboard/RecentActivity";
+import AvailabilityToggle from "../../components/common/AvailabilityToggle";
+
+import dashboardAPI from "../../services/dashboardAPI";
+import ordersAPI from "../../services/ordersAPI";
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -27,15 +28,15 @@ const Dashboard = () => {
       setAvailableOrders(data.availableOrders || []);
       setStats(data.stats || {});
     } catch (error) {
-      console.error('Error loading dashboard:', error);
-      
+      console.error("Error loading dashboard:", error);
+
       // Fallback to mock data for development
       const mockData = {
         partner: {
           id: 1,
-          fullName: 'Demo Partner',
-          pincode: '441904',
-          verificationStatus: 'VERIFIED'
+          fullName: "Demo Partner",
+          pincode: "441904",
+          verificationStatus: "VERIFIED",
         },
         isAvailable: false,
         activeOrders: [],
@@ -45,17 +46,17 @@ const Dashboard = () => {
           activeOrders: 0,
           completedDeliveries: 0,
           todayEarnings: 0,
-          totalEarnings: 0
-        }
+          totalEarnings: 0,
+        },
       };
-      
+
       setDashboardData(mockData);
       setIsAvailable(mockData.isAvailable);
       setActiveOrders(mockData.activeOrders);
       setAvailableOrders(mockData.availableOrders);
       setStats(mockData.stats);
-      
-      toast.warn('Using demo data - Backend API not available');
+
+      toast.warn("Using demo data - Backend API not available");
     } finally {
       setLoading(false);
     }
@@ -63,36 +64,36 @@ const Dashboard = () => {
 
   // Toggle availability
   const handleAvailabilityToggle = async (newAvailability) => {
-    console.log('handleAvailabilityToggle called with:', newAvailability);
+    console.log("handleAvailabilityToggle called with:", newAvailability);
     try {
       setLoading(true);
-      
+
       // Try to call the API
       await dashboardAPI.toggleAvailability(newAvailability);
       setIsAvailable(newAvailability);
-      
+
       if (newAvailability) {
-        toast.success('You are now ONLINE and available for orders!');
+        toast.success("You are now ONLINE and available for orders!");
         // Start real-time updates when going online
         startRealTimeUpdates();
       } else {
-        toast.info('You are now OFFLINE');
+        toast.info("You are now OFFLINE");
         // Stop real-time updates when going offline
         stopRealTimeUpdates();
       }
-      
+
       // Refresh dashboard data
       await loadDashboardData();
     } catch (error) {
-      console.error('Error toggling availability:', error);
-      
+      console.error("Error toggling availability:", error);
+
       // Fallback: Update state locally for demo purposes
       setIsAvailable(newAvailability);
-      
+
       if (newAvailability) {
-        toast.success('Demo: You are now ONLINE (API not available)');
+        toast.success("Demo: You are now ONLINE (API not available)");
       } else {
-        toast.info('Demo: You are now OFFLINE (API not available)');
+        toast.info("Demo: You are now OFFLINE (API not available)");
       }
     } finally {
       setLoading(false);
@@ -103,16 +104,16 @@ const Dashboard = () => {
   const handleAcceptOrder = async (orderId) => {
     try {
       await ordersAPI.acceptOrder(orderId);
-      toast.success('Order accepted successfully!');
-      
+      toast.success("Order accepted successfully!");
+
       // Refresh dashboard data
       await loadDashboardData();
     } catch (error) {
-      console.error('Error accepting order:', error);
+      console.error("Error accepting order:", error);
       if (error.response?.status === 409) {
-        toast.error('Order is no longer available');
+        toast.error("Order is no longer available");
       } else {
-        toast.error('Failed to accept order');
+        toast.error("Failed to accept order");
       }
       // Refresh to get updated data
       await loadDashboardData();
@@ -123,46 +124,82 @@ const Dashboard = () => {
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
       await ordersAPI.updateOrderStatus(orderId, newStatus);
-      
+
       const statusMessages = {
-        'PICKED_UP': 'Order marked as picked up',
-        'OUT_FOR_DELIVERY': 'Order is now out for delivery',
-        'DELIVERED': 'Order delivered successfully!',
-        'CANCELLED': 'Order cancelled'
+        PICKED_UP: "Order marked as picked up",
+        OUT_FOR_DELIVERY: "Order is now out for delivery",
+        DELIVERED: "Order delivered successfully!",
+        CANCELLED: "Order cancelled",
       };
-      
-      toast.success(statusMessages[newStatus] || 'Order status updated');
-      
+
+      toast.success(statusMessages[newStatus] || "Order status updated");
+
       // Refresh dashboard data
       await loadDashboardData();
     } catch (error) {
-      console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      console.error("Error updating order status:", error);
+
+      // Check if this is a payment collection error for COD orders
+      const errorMessage =
+        error.response?.data?.error || error.message || "Unknown error";
+
+      if (
+        errorMessage.includes(
+          "Cannot mark COD order as delivered without collecting payment"
+        ) ||
+        (errorMessage.includes("payment") && errorMessage.includes("collect"))
+      ) {
+        toast.error(
+          "💰 Payment Required: Please collect payment from customer before marking as delivered",
+          {
+            position: "top-center",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
+      } else if (
+        errorMessage.includes("not assigned") ||
+        errorMessage.includes("not eligible")
+      ) {
+        toast.error("❌ You are not authorized to update this order");
+      } else if (errorMessage.includes("Order not found")) {
+        toast.error(
+          "❌ Order not found. It may have been cancelled or completed by another partner"
+        );
+      } else {
+        toast.error(`❌ Failed to update order: ${errorMessage}`);
+      }
+
+      // Refresh dashboard data to get latest status
+      await loadDashboardData();
     }
   };
 
   // Start real-time updates
   const startRealTimeUpdates = () => {
     if (refreshInterval) return; // Already running
-    
+
     const interval = setInterval(async () => {
       try {
         // Send heartbeat to keep partner alive
         await dashboardAPI.heartbeat();
-        
+
         // Refresh available orders and stats
         const [availableOrdersData, statsData] = await Promise.all([
           ordersAPI.getAvailableOrders(),
-          dashboardAPI.getStats()
+          dashboardAPI.getStats(),
         ]);
-        
+
         setAvailableOrders(availableOrdersData);
         setStats(statsData);
       } catch (error) {
-        console.error('Error in real-time update:', error);
+        console.error("Error in real-time update:", error);
       }
     }, 10000); // Update every 10 seconds
-    
+
     setRefreshInterval(interval);
   };
 
@@ -177,7 +214,7 @@ const Dashboard = () => {
   // Initialize dashboard
   useEffect(() => {
     loadDashboardData();
-    
+
     // Cleanup on unmount
     return () => {
       stopRealTimeUpdates();
@@ -212,11 +249,11 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Welcome back, {dashboardData?.partner?.fullName || 'Partner'}!
+                Welcome back, {dashboardData?.partner?.fullName || "Partner"}!
               </h1>
               <p className="text-gray-600 mt-1">
-                Pincode: {dashboardData?.partner?.pincode} | 
-                Status: {dashboardData?.partner?.verificationStatus}
+                Pincode: {dashboardData?.partner?.pincode} | Status:{" "}
+                {dashboardData?.partner?.verificationStatus}
               </p>
             </div>
           </div>
@@ -226,12 +263,13 @@ const Dashboard = () => {
         <div className="bg-white rounded-lg shadow mb-8 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Delivery Status</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Delivery Status
+              </h2>
               <p className="text-gray-600 mt-1">
-                {isAvailable 
-                  ? 'You are online and ready to receive orders' 
-                  : 'You are offline - toggle to start receiving orders'
-                }
+                {isAvailable
+                  ? "You are online and ready to receive orders"
+                  : "You are offline - toggle to start receiving orders"}
               </p>
               {stats.activeOrders >= 2 && (
                 <p className="text-orange-600 text-sm mt-1 font-medium">
@@ -239,7 +277,7 @@ const Dashboard = () => {
                 </p>
               )}
             </div>
-            
+
             <AvailabilityToggle
               isAvailable={isAvailable}
               onToggle={handleAvailabilityToggle}
@@ -261,6 +299,7 @@ const Dashboard = () => {
               orders={activeOrders}
               onUpdateStatus={handleUpdateOrderStatus}
               loading={loading}
+              onRefreshOrders={loadDashboardData}
             />
           </div>
 

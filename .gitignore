@@ -19,6 +19,10 @@ application-prod.properties
 application-secrets.properties
 **/application-secrets.properties
 **/application-local.properties
+**/application-prod.properties
+src/main/resources/application-secrets.properties
+src/main/resources/application-local.properties
+src/main/resources/application-prod.properties
 
 # Environment files
 .env

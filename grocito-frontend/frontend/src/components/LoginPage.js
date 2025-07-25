@@ -75,7 +75,7 @@ const LoginPage = () => {
       console.log('Login successful:', userData);
       
       // Show success toast
-      toast.success('Login successful! 🎉', {
+      toast.success('Login successful!', {
         position: "bottom-right",
         autoClose: 2000,
       });
@@ -237,7 +237,7 @@ const LoginPage = () => {
               }}
               className="bg-red-500 text-white py-1 px-2 rounded text-xs"
             >
-              🔧 React Router Redirect
+              Debug: React Router
             </button>
             
             <button
@@ -256,7 +256,7 @@ const LoginPage = () => {
               }}
               className="bg-blue-500 text-white py-1 px-2 rounded text-xs"
             >
-              🔧 Window Location Redirect
+              Debug: Window Location
             </button>
           </div>
         </div>

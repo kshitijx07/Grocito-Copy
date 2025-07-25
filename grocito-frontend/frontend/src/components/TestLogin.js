@@ -62,13 +62,13 @@ const TestLogin = () => {
       
       const response = await fetch('http://localhost:8080/api/products');
       if (response.ok) {
-        toast.success('Backend is running! ✅');
+        toast.success('Backend is running!');
       } else {
         toast.error(`Backend responded with status: ${response.status}`);
       }
     } catch (error) {
       console.error('Backend test error:', error);
-      toast.error('Backend is NOT running! ❌ Start your Spring Boot app.', { autoClose: 5000 });
+      toast.error('Backend is NOT running! Start your Spring Boot app.', { autoClose: 5000 });
     }
   };
 

@@ -1,4 +1,12 @@
 import React from 'react';
+import { 
+  ShoppingCartIcon, 
+  CheckCircleIcon, 
+  ExclamationTriangleIcon, 
+  XCircleIcon,
+  FaceSmileIcon,
+  TagIcon 
+} from '@heroicons/react/24/outline';
 
 const ProductCard = ({ 
   product, 
@@ -6,20 +14,9 @@ const ProductCard = ({
   onAddToCart, 
   isAddingToCart 
 }) => {
-  const getCategoryEmoji = (category) => {
-    const emojiMap = {
-      'vegetables': '🥬',
-      'fruits': '🍎',
-      'dairy': '🥛',
-      'meat': '🥩',
-      'bakery': '🍞',
-      'snacks': '🍿',
-      'beverages': '🥤',
-      'frozen': '🧊',
-      'pantry': '🥫',
-      'default': '🛒'
-    };
-    return emojiMap[category?.toLowerCase()] || emojiMap.default;
+  const getCategoryIcon = (category) => {
+    // Return TagIcon for all categories for consistency
+    return <TagIcon className="w-4 h-4" />;
   };
 
   return (
@@ -36,7 +33,7 @@ const ProductCard = ({
         {product.stock === 0 && (
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-gray-600 bg-opacity-90 flex items-center justify-center rounded-xl">
             <div className="text-center">
-              <span className="text-white font-bold text-lg block">😔</span>
+              <XCircleIcon className="w-8 h-8 text-white mb-2 mx-auto" />
               <span className="text-white font-bold text-sm">Out of Stock</span>
             </div>
           </div>
@@ -44,7 +41,7 @@ const ProductCard = ({
         <div className="absolute top-3 right-3">
           <div className="bg-gradient-to-r from-white to-gray-50 rounded-xl px-3 py-1 shadow-soft border border-gray-200">
             <span className="text-sm font-bold text-gray-700 flex items-center space-x-1">
-              <span>{getCategoryEmoji(product.category)}</span>
+              {getCategoryIcon(product.category)}
               <span>{product.category}</span>
             </span>
           </div>
@@ -63,7 +60,7 @@ const ProductCard = ({
           <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-xl shadow-soft">
             <span className="text-xl font-bold">₹{product.price}</span>
           </div>
-          <span className={`text-sm font-semibold px-3 py-2 rounded-xl ${
+          <span className={`text-sm font-semibold px-3 py-2 rounded-xl flex items-center space-x-1 ${
             product.stock > 0 
               ? product.stock <= 5 
                 ? 'text-orange-700 bg-gradient-to-r from-orange-100 to-yellow-100 border border-orange-200' 
@@ -72,9 +69,24 @@ const ProductCard = ({
           }`}>
             {product.stock > 0 
               ? product.stock <= 5 
-                ? `⚠️ Only ${product.stock} left!` 
-                : `✅ ${product.stock} in stock`
-              : '❌ Out of stock'
+                ? (
+                  <>
+                    <ExclamationTriangleIcon className="w-4 h-4" />
+                    <span>Only {product.stock} left!</span>
+                  </>
+                )
+                : (
+                  <>
+                    <CheckCircleIcon className="w-4 h-4" />
+                    <span>{product.stock} in stock</span>
+                  </>
+                )
+              : (
+                <>
+                  <XCircleIcon className="w-4 h-4" />
+                  <span>Out of stock</span>
+                </>
+              )
             }
           </span>
         </div>
@@ -83,7 +95,7 @@ const ProductCard = ({
           {cartQuantity > 0 ? (
             <div className="flex items-center space-x-3 flex-1">
               <div className="bg-gradient-to-r from-blue-100 to-indigo-100 px-4 py-2 rounded-xl border border-blue-200 flex items-center space-x-2">
-                <span className="text-lg">🛒</span>
+                <ShoppingCartIcon className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-bold text-blue-700">In cart: {cartQuantity}</span>
               </div>
               <button
@@ -111,7 +123,7 @@ const ProductCard = ({
                 </>
               ) : (
                 <>
-                  <span className="text-lg">🛒</span>
+                  <ShoppingCartIcon className="w-5 h-5" />
                   <span>Add to Cart</span>
                 </>
               )}

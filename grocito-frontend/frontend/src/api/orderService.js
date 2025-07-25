@@ -179,12 +179,21 @@ export const orderService = {
         // If sync fails, we can still try to place the order
       }
       
+      // Get landing page pincode from localStorage (priority over user profile pincode)
+      const landingPagePincode = localStorage.getItem('pincode');
+      console.log('🎯 Using landing page pincode for delivery partner assignment:', landingPagePincode);
+      
       // Backend expects userId and deliveryAddress as request parameters, not in body
       // Based on OrderController.java: @RequestParam Long userId, @RequestParam String deliveryAddress
       const params = new URLSearchParams({
         userId: String(userId), // Ensure userId is converted to string for URL params
         deliveryAddress: String(deliveryAddress).trim()
       });
+      
+      // Add landing page pincode if available
+      if (landingPagePincode) {
+        params.append('landingPagePincode', landingPagePincode);
+      }
 
       console.log('Order request params:', params.toString());
       const response = await api.post(`/orders/place-from-cart?${params.toString()}`);

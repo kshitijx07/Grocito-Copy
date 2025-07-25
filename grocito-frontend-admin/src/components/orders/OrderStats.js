@@ -83,7 +83,7 @@ const OrderStats = ({ stats, adminInfo }) => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {adminInfo.isSuperAdmin ? '🌍 Global Dashboard' : '📍 Regional Dashboard'}
+                {adminInfo.isSuperAdmin ? 'Global Dashboard' : 'Regional Dashboard'}
               </h3>
               <p className="text-sm text-gray-600">
                 {adminInfo.isSuperAdmin 

@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  DocumentTextIcon, 
+  ArchiveBoxIcon, 
+  TruckIcon, 
+  CheckCircleIcon 
+} from '@heroicons/react/24/outline';
 import { orderService } from '../../api/orderService';
 
 const OrderModal = ({ order, onClose, onUpdateStatus, adminInfo }) => {
@@ -84,10 +90,10 @@ const OrderModal = ({ order, onClose, onUpdateStatus, adminInfo }) => {
 
   const getStatusSteps = () => {
     const steps = [
-      { key: 'PLACED', label: 'Order Placed', icon: '📝' },
-      { key: 'PACKED', label: 'Packed', icon: '📦' },
-      { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: '🚚' },
-      { key: 'DELIVERED', label: 'Delivered', icon: '✅' }
+      { key: 'PLACED', label: 'Order Placed', icon: <DocumentTextIcon className="w-5 h-5" /> },
+      { key: 'PACKED', label: 'Packed', icon: <ArchiveBoxIcon className="w-5 h-5" /> },
+      { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: <TruckIcon className="w-5 h-5" /> },
+      { key: 'DELIVERED', label: 'Delivered', icon: <CheckCircleIcon className="w-5 h-5" /> }
     ];
 
     const currentStatus = orderDetails?.status || order.status;

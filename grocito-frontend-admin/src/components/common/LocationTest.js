@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import { 
+  CheckCircleIcon, 
+  XCircleIcon, 
+  ExclamationTriangleIcon, 
+  ArrowPathIcon 
+} from '@heroicons/react/24/outline';
 import { locationService } from '../../services/locationService';
 
 const LocationTest = () => {
@@ -88,15 +94,15 @@ const LocationTest = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'success':
-        return <span className="text-green-500">✅</span>;
+        return <CheckCircleIcon className="w-4 h-4 text-green-500" />;
       case 'error':
-        return <span className="text-red-500">❌</span>;
+        return <XCircleIcon className="w-4 h-4 text-red-500" />;
       case 'warning':
-        return <span className="text-yellow-500">⚠️</span>;
+        return <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500" />;
       case 'running':
-        return <span className="text-blue-500">🔄</span>;
+        return <ArrowPathIcon className="w-4 h-4 text-blue-500 animate-spin" />;
       default:
-        return <span className="text-gray-500">⏳</span>;
+        return <ArrowPathIcon className="w-4 h-4 text-gray-500" />;
     }
   };
 

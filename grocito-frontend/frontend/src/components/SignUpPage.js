@@ -88,7 +88,7 @@ const SignUpPage = () => {
       console.log('Registration response:', registerResponse);
       
       // Show success toast
-      toast.success('Account created successfully! 🎉', {
+      toast.success('Account created successfully!', {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -138,7 +138,7 @@ const SignUpPage = () => {
       console.log('Final pincode for delivery:', localStorage.getItem('pincode'));
       
       setTimeout(() => {
-        toast.success('Welcome to Grocito! 🛒', {
+        toast.success('Welcome to Grocito!', {
           position: "bottom-right",
           autoClose: 2000,
         });

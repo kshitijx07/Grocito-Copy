@@ -31,10 +31,9 @@ const EnhancedCheckoutPage = () => {
     }
     setUser(currentUser);
     
-    // Pre-fill address if available
-    if (currentUser.address) {
-      setDeliveryAddress(currentUser.address);
-    }
+    // CRITICAL FIX: Don't pre-fill address - let user enter fresh delivery address
+    // This ensures users can deliver to different locations than their profile address
+    console.log('Checkout initialized - delivery address field is empty for user input');
     
     fetchCartItems(currentUser.id);
   }, [navigate]);

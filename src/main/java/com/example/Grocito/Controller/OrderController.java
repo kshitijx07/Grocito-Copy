@@ -72,7 +72,8 @@ public class OrderController {
             @RequestParam Long userId,
             @RequestParam String deliveryAddress,
             @RequestParam(defaultValue = "COD") String paymentMethod,
-            @RequestParam(required = false) String paymentId) {
+            @RequestParam(required = false) String paymentId,
+            @RequestParam(required = false) String landingPagePincode) {
         logger.info("Received request to place order from cart for user ID: {}", userId);
         try {
             // Validate input parameters
@@ -86,7 +87,7 @@ public class OrderController {
                 return ResponseEntity.badRequest().body("Delivery address is required");
             }
             
-            // Check if user exists and has a valid pincode
+            // Check if user exists
             logger.debug("Finding user with ID: {}", userId);
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> {
@@ -94,12 +95,14 @@ public class OrderController {
                         return new RuntimeException("User not found with id: " + userId);
                     });
             
-            if (user.getPincode() == null || user.getPincode().trim().isEmpty()) {
-                logger.warn("Order from cart failed: User {} has no valid pincode", user.getEmail());
-                return ResponseEntity.badRequest().body("User must have a valid pincode in their profile for delivery. Please update your profile.");
+            // CRITICAL FIX: Validate pincode availability (landing page pincode takes priority)
+            if ((landingPagePincode == null || landingPagePincode.trim().isEmpty()) && 
+                (user.getPincode() == null || user.getPincode().trim().isEmpty())) {
+                logger.warn("Order from cart failed: No valid pincode available for user {}", user.getEmail());
+                return ResponseEntity.badRequest().body("A valid pincode is required for delivery. Please select a pincode on the landing page.");
             }
             
-            Order savedOrder = orderService.placeOrderFromCart(userId, deliveryAddress.trim(), paymentMethod, paymentId);
+            Order savedOrder = orderService.placeOrderFromCart(userId, deliveryAddress.trim(), paymentMethod, paymentId, landingPagePincode);
             
             // Notify available delivery partners in the same pincode
             logger.info("Order {} placed successfully. Notifying delivery partners in pincode {}", 

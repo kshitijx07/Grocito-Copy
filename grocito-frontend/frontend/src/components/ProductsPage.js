@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ShoppingBagIcon, 
+  ShoppingCartIcon, 
+  MagnifyingGlassIcon, 
+  ArchiveBoxIcon,
+  HandRaisedIcon,
+  SparklesIcon 
+} from '@heroicons/react/24/outline';
 import { productService } from '../api/productService';
 import { enhancedCartService } from '../api/enhancedCartService';
 import { authService } from '../api/authService';
@@ -245,7 +253,7 @@ const ProductsPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-soft animate-pulse">
-            <span className="text-4xl">🛒</span>
+            <ShoppingCartIcon className="w-12 h-12 text-white" />
           </div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-2">
             Loading Fresh Groceries...
@@ -276,14 +284,14 @@ const ProductsPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-soft">
-                <span className="text-3xl">🛍️</span>
+                <ShoppingBagIcon className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                   Fresh Groceries Delivered Fast
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  Welcome back, <span className="font-semibold text-green-700">{user?.fullName || user?.email?.split('@')[0] || 'User'}</span>! 👋
+                  Welcome back, <span className="font-semibold text-green-700">{user?.fullName || user?.email?.split('@')[0] || 'User'}</span>!
                 </p>
               </div>
             </div>
@@ -319,9 +327,11 @@ const ProductsPage = () => {
           <div className="card">
             <div className="card-body text-center py-16">
               <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <span className="text-4xl">
-                  {products.length === 0 ? '📦' : '🔍'}
-                </span>
+                {products.length === 0 ? (
+                  <ArchiveBoxIcon className="w-12 h-12 text-gray-500" />
+                ) : (
+                  <MagnifyingGlassIcon className="w-12 h-12 text-gray-500" />
+                )}
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
                 {products.length === 0 ? 'No products available' : 'No products found'}
@@ -366,7 +376,7 @@ const ProductsPage = () => {
           <div className="card mt-12">
             <div className="card-body text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-soft">
-                <span className="text-3xl">🎉</span>
+                <SparklesIcon className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-3">
                 Welcome to Grocito!

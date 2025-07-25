@@ -1,5 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  ShoppingBagIcon, 
+  ShoppingCartIcon, 
+  MapPinIcon, 
+  UserIcon,
+  CreditCardIcon,
+  ArchiveBoxIcon 
+} from '@heroicons/react/24/outline';
 import { authService } from '../api/authService';
 
 const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => {
@@ -21,7 +29,7 @@ const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => 
               className="group flex items-center space-x-3 hover:scale-105 transition-all duration-300"
             >
               <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-soft group-hover:shadow-soft-lg transition-all duration-300">
-                <span className="text-white font-bold text-xl">🛒</span>
+                <ShoppingBagIcon className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
@@ -33,7 +41,7 @@ const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => 
             {pincode && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-2 rounded-xl border border-green-200 shadow-soft">
                 <span className="text-sm font-semibold text-green-700 flex items-center space-x-2">
-                  <span className="text-lg">📍</span>
+                  <MapPinIcon className="w-4 h-4 text-green-600" />
                   <span>Delivering to: <span className="bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-1 rounded-xl font-bold">{pincode}</span></span>
                 </span>
               </div>
@@ -45,23 +53,26 @@ const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => 
             <nav className="hidden md:flex items-center space-x-2">
               <button
                 onClick={() => navigate('/products')}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all duration-200"
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all duration-200 flex items-center space-x-2"
               >
-                🛍️ Shop
+                <ShoppingBagIcon className="w-4 h-4" />
+                <span>Shop</span>
               </button>
               {showOrders && (
                 <button
                   onClick={() => navigate('/enhanced-orders')}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200"
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 flex items-center space-x-2"
                 >
-                  📦 Orders
+                  <ArchiveBoxIcon className="w-4 h-4" />
+                  <span>Orders</span>
                 </button>
               )}
               <button
                 onClick={() => navigate('/payment-history')}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all duration-200"
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all duration-200 flex items-center space-x-2"
               >
-                💳 Payments
+                <CreditCardIcon className="w-4 h-4" />
+                <span>Payments</span>
               </button>
             </nav>
 
@@ -85,7 +96,7 @@ const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => 
             <div className="flex items-center space-x-3 bg-white rounded-2xl px-6 py-3 border border-gray-200 shadow-soft hover:shadow-soft-lg transition-all duration-300">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
-                  <span className="text-lg">👤</span>
+                  <UserIcon className="w-5 h-5 text-purple-600" />
                 </div>
                 <span className="text-gray-700 font-medium">
                   Hi, <span className="font-bold text-gray-900">{user?.fullName || user?.email?.split('@')[0] || 'User'}</span>

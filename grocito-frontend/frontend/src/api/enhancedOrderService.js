@@ -94,11 +94,20 @@ export const enhancedOrderService = {
       
       // Backend expects userId, deliveryAddress, paymentMethod, and paymentId as request parameters
       // Based on OrderController.java: @RequestParam Long userId, @RequestParam String deliveryAddress, @RequestParam String paymentMethod, @RequestParam String paymentId
+      // Get landing page pincode from localStorage (priority over user profile pincode)
+      const landingPagePincode = localStorage.getItem('pincode');
+      console.log('🎯 Using landing page pincode for delivery partner assignment:', landingPagePincode);
+      
       const params = new URLSearchParams({
         userId: String(userId), // Ensure userId is converted to string for URL params
         deliveryAddress: String(deliveryAddress).trim(),
         paymentMethod: paymentMethod || 'COD'
       });
+      
+      // Add landing page pincode if available
+      if (landingPagePincode) {
+        params.append('landingPagePincode', landingPagePincode);
+      }
       
       // Add paymentId if provided (for online payments)
       if (paymentInfo && paymentInfo.paymentId) {

@@ -109,8 +109,8 @@ public class OrderService {
      * Place an order from user's cart
      */
     @Transactional
-    public Order placeOrderFromCart(Long userId, String deliveryAddress, String paymentMethod, String paymentId) {
-        logger.info("Processing order from cart for user ID: {}", userId);
+    public Order placeOrderFromCart(Long userId, String deliveryAddress, String paymentMethod, String paymentId, String landingPagePincode) {
+        logger.info("Processing order from cart for user ID: {} with landing page pincode: {}", userId, landingPagePincode);
         
         // Get user's cart
         logger.debug("Retrieving cart items for user ID: {}", userId);
@@ -155,14 +155,17 @@ public class OrderService {
             logger.debug("COD payment configured - payment pending until delivery");
         }
         
-        // Set pincode from user's profile if not provided in the order
-        logger.debug("Setting pincode for delivery from user profile");
-        if (user.getPincode() != null && !user.getPincode().isEmpty()) {
+        // CRITICAL FIX: Use landing page pincode for delivery partner assignment
+        logger.debug("Setting pincode for delivery - prioritizing landing page pincode");
+        if (landingPagePincode != null && !landingPagePincode.trim().isEmpty()) {
+            order.setPincode(landingPagePincode.trim());
+            logger.info("Using landing page pincode for delivery: {}", landingPagePincode);
+        } else if (user.getPincode() != null && !user.getPincode().isEmpty()) {
             order.setPincode(user.getPincode());
-            logger.debug("Pincode set to: {}", user.getPincode());
+            logger.debug("Fallback to user profile pincode: {}", user.getPincode());
         } else {
-            logger.warn("Order placement failed: Pincode missing in user profile for user ID: {}", userId);
-            throw new RuntimeException("Pincode is required for delivery. Please update your profile with a valid pincode.");
+            logger.warn("Order placement failed: No valid pincode available for user ID: {}", userId);
+            throw new RuntimeException("Pincode is required for delivery. Please ensure a valid pincode is selected.");
         }
         
         List<OrderItem> orderItems = new ArrayList<>();

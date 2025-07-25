@@ -1,4 +1,10 @@
 import React from 'react';
+import { 
+  MagnifyingGlassIcon, 
+  TagIcon, 
+  ShoppingBagIcon,
+  ArchiveBoxIcon 
+} from '@heroicons/react/24/outline';
 
 const SearchAndFilter = ({ 
   searchQuery, 
@@ -9,20 +15,9 @@ const SearchAndFilter = ({
   resultsCount,
   totalCount 
 }) => {
-  const getCategoryEmoji = (category) => {
-    const emojiMap = {
-      'All': '🛒',
-      'vegetables': '🥬',
-      'fruits': '🍎',
-      'dairy': '🥛',
-      'meat': '🥩',
-      'bakery': '🍞',
-      'snacks': '🍿',
-      'beverages': '🥤',
-      'frozen': '🧊',
-      'pantry': '🥫',
-    };
-    return emojiMap[category?.toLowerCase()] || '📦';
+  const getCategoryIcon = (category) => {
+    // Return consistent TagIcon for all categories
+    return <TagIcon className="w-4 h-4" />;
   };
 
   return (
@@ -30,7 +25,7 @@ const SearchAndFilter = ({
       <div className="card-header">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
-            <span className="text-xl">🔍</span>
+            <MagnifyingGlassIcon className="w-6 h-6 text-blue-600" />
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900">Find Your Groceries</h3>
@@ -94,7 +89,7 @@ const SearchAndFilter = ({
                       : `bg-gradient-to-r ${colorClass}`
                   }`}
                 >
-                  <span>{getCategoryEmoji(category)}</span>
+                  {getCategoryIcon(category)}
                   <span>{category}</span>
                 </button>
               );
@@ -114,13 +109,15 @@ const SearchAndFilter = ({
               </p>
               <div className="flex items-center space-x-2 mt-1">
                 {selectedCategory !== 'All' && (
-                  <span className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-3 py-1 rounded-xl text-sm font-medium border border-green-200">
-                    {getCategoryEmoji(selectedCategory)} {selectedCategory}
+                  <span className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-3 py-1 rounded-xl text-sm font-medium border border-green-200 flex items-center space-x-1">
+                    {getCategoryIcon(selectedCategory)}
+                    <span>{selectedCategory}</span>
                   </span>
                 )}
                 {searchQuery && (
-                  <span className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-3 py-1 rounded-xl text-sm font-medium border border-blue-200">
-                    🔍 "{searchQuery}"
+                  <span className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-3 py-1 rounded-xl text-sm font-medium border border-blue-200 flex items-center space-x-1">
+                    <MagnifyingGlassIcon className="w-4 h-4" />
+                    <span>"{searchQuery}"</span>
                   </span>
                 )}
               </div>

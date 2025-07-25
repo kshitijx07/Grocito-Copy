@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  ArchiveBoxIcon, 
+  ShoppingBagIcon, 
+  CreditCardIcon, 
+  MapPinIcon, 
+  ExclamationTriangleIcon,
+  SparklesIcon 
+} from '@heroicons/react/24/outline';
 import { enhancedOrderService } from '../api/enhancedOrderService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
@@ -75,7 +83,7 @@ const OrdersPage = () => {
 
     // Show toast if coming from checkout with a new order
     if (justPlaced && newOrderId) {
-      toast.success('Order placed successfully! 🎉', {
+      toast.success('Order placed successfully!', {
         position: "bottom-right",
         autoClose: 5000,
       });
@@ -134,7 +142,7 @@ const OrdersPage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-soft animate-pulse">
-            <span className="text-4xl">📦</span>
+            <ArchiveBoxIcon className="w-12 h-12 text-white" />
           </div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Loading Your Orders...
@@ -160,7 +168,7 @@ const OrdersPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-soft">
-                <span className="text-3xl">📦</span>
+                <ArchiveBoxIcon className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -187,7 +195,7 @@ const OrdersPage = () => {
                 onClick={() => navigate('/products')}
                 className="btn-primary flex items-center space-x-2"
               >
-                <span>🛍️</span>
+                <ShoppingBagIcon className="w-5 h-5" />
                 <span>Continue Shopping</span>
               </button>
             </div>
@@ -200,7 +208,7 @@ const OrdersPage = () => {
             <div className="card-body">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <span className="text-white text-xl">⚠️</span>
+                  <ExclamationTriangleIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="font-bold text-red-900">Error Loading Orders</h3>
@@ -215,7 +223,7 @@ const OrdersPage = () => {
           <div className="card">
             <div className="card-body text-center py-16">
               <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <span className="text-4xl">📦</span>
+                <ArchiveBoxIcon className="w-12 h-12 text-gray-500" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">No orders yet</h3>
               <p className="text-gray-600 text-lg mb-6">
@@ -226,13 +234,13 @@ const OrdersPage = () => {
                   onClick={() => navigate('/products')}
                   className="btn-primary"
                 >
-                  🛍️ Start Shopping
+                  Start Shopping
                 </button>
                 <button
                   onClick={() => navigate('/payment-history')}
                   className="btn-secondary"
                 >
-                  💳 Payment History
+                  Payment History
                 </button>
               </div>
             </div>
@@ -251,7 +259,7 @@ const OrdersPage = () => {
                   <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
-                        <span className="text-xl">📦</span>
+                        <ArchiveBoxIcon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <div className="flex items-center space-x-3 mb-1">
@@ -261,7 +269,7 @@ const OrdersPage = () => {
                           </span>
                           {isNewOrder && (
                             <span className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-xl text-sm font-semibold animate-pulse">
-                              🎉 New!
+                              New!
                             </span>
                           )}
                         </div>
@@ -280,7 +288,7 @@ const OrdersPage = () => {
                   {/* Order Items */}
                   <div className="mb-6">
                     <h4 className="font-bold text-lg text-gray-900 mb-4 flex items-center space-x-2">
-                      <span>🛍️</span>
+                      <ShoppingBagIcon className="w-5 h-5" />
                       <span>Order Items ({order.items?.length || order.orderItems?.length || 0})</span>
                     </h4>
                     <div className="space-y-4">
@@ -313,7 +321,7 @@ const OrdersPage = () => {
                         </div>
                       )) : (
                         <div className="text-center py-8 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                          <span className="text-4xl mb-2 block">📦</span>
+                          <ArchiveBoxIcon className="w-16 h-16 text-gray-400 mx-auto mb-2" />
                           <p className="text-gray-500 font-medium">No items available for this order</p>
                         </div>
                       )}
@@ -324,7 +332,7 @@ const OrdersPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                       <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-lg">📍</span>
+                        <MapPinIcon className="w-5 h-5 text-blue-600" />
                         <h5 className="font-bold text-blue-900">Delivery Address</h5>
                       </div>
                       <p className="text-blue-800 font-medium">{order.deliveryAddress || 'Not available'}</p>
@@ -332,7 +340,7 @@ const OrdersPage = () => {
                     
                     <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
                       <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-lg">💳</span>
+                        <CreditCardIcon className="w-5 h-5 text-green-600" />
                         <h5 className="font-bold text-green-900">Payment Method</h5>
                       </div>
                       <p className="text-green-800 font-medium">

@@ -144,7 +144,7 @@ const UserManagement = () => {
   const handleRoleUpdate = async (userId, newRole) => {
     try {
       await userService.updateUserRole(userId, newRole);
-      toast.success('User role updated successfully! 🎉');
+      toast.success('User role updated successfully!');
       fetchUsers(pagination.currentPage);
       setShowModal(false);
     } catch (error) {
@@ -157,7 +157,7 @@ const UserManagement = () => {
   const handleStatusToggle = async (userId, isActive) => {
     try {
       await userService.toggleUserStatus(userId, isActive);
-      toast.success(`User ${isActive ? 'activated' : 'deactivated'} successfully! 🎉`);
+      toast.success(`User ${isActive ? 'activated' : 'deactivated'} successfully!`);
       fetchUsers(pagination.currentPage);
     } catch (error) {
       toast.error('Failed to update user status');
@@ -168,7 +168,7 @@ const UserManagement = () => {
   const handleUserUpdate = async (userId, userData) => {
     try {
       await userService.updateUser(userId, userData);
-      toast.success('User details updated successfully! 🎉');
+      toast.success('User details updated successfully!');
       fetchUsers(pagination.currentPage);
       setShowModal(false);
     } catch (error) {
@@ -181,7 +181,7 @@ const UserManagement = () => {
   const handleUserDelete = async (userId, forceDelete = false) => {
     try {
       await userService.deleteUser(userId, forceDelete);
-      toast.success('User deleted successfully! 🗑️');
+      toast.success('User deleted successfully!');
       fetchUsers(pagination.currentPage);
       setShowModal(false);
     } catch (error) {
@@ -196,7 +196,7 @@ const UserManagement = () => {
         if (isSuperAdmin) {
           // Show confirmation dialog for force deletion
           const confirmForceDelete = window.confirm(
-            `⚠️ WARNING: Force Delete User\n\n` +
+            `WARNING: Force Delete User\n\n` +
             `This user has ${orderCount} active order${orderCount === '1' ? '' : 's'}. ` +
             `Force deleting will permanently remove:\n` +
             `• User account\n` +

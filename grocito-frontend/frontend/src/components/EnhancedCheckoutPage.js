@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { enhancedCartService } from '../api/enhancedCartService';
 import { enhancedOrderService } from '../api/enhancedOrderService';
-import { paymentService } from '../api/paymentService';
+import { razorpayService } from '../api/razorpayService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import Header from './Header';
@@ -60,121 +60,60 @@ const EnhancedCheckoutPage = () => {
     }
   };
 
-  // Function to load Razorpay script
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => {
-        resolve(true);
-      };
-      script.onerror = () => {
-        resolve(false);
-      };
-      document.body.appendChild(script);
-    });
-  };
-
-  // Function to handle Razorpay payment
-  const handleRazorpayPayment = async (orderData) => {
-    const res = await loadRazorpayScript();
-    
-    if (!res) {
-      toast.error('Razorpay SDK failed to load. Switching to Cash on Delivery.');
-      // Fallback to COD if Razorpay fails to load
-      setPaymentMethod('COD');
-      return false;
-    }
-    
-    console.log('Razorpay order data:', orderData);
-    
-    const options = {
-      key: 'rzp_test_cSaPgCCDgkPbkb', // Test key - replace with actual key in production
-      amount: orderData.amount,
-      currency: orderData.currency || 'INR',
-      name: 'Grocito',
-      description: 'Grocery Order Payment',
-      order_id: orderData.id,
-      handler: async function (response) {
-        try {
-          console.log('Razorpay payment response:', response);
-          
-          // Verify payment with backend
+  // Handle online payment with correct flow
+  const handleOnlinePayment = async () => {
+    try {
+      await razorpayService.initializePayment({
+        amount: totalAmount,
+        orderId: 'order_' + Date.now(),
+        customerName: user?.fullName || user?.email || 'Customer',
+        customerEmail: user?.email || 'customer@example.com',
+        customerPhone: user?.contactNumber || '9999999999',
+        onSuccess: async (paymentResponse) => {
+          // Only place order after successful payment
           try {
-            const verificationResult = await paymentService.verifyPayment(
-              response.razorpay_payment_id,
-              response.razorpay_order_id,
-              response.razorpay_signature,
-              orderData.orderId
+            const orderResponse = await enhancedOrderService.placeOrderFromCart(
+              user.id, 
+              deliveryAddress, 
+              'ONLINE',
+              {
+                paymentId: paymentResponse.paymentId,
+                razorpayOrderId: paymentResponse.orderId
+              }
             );
             
-            if (verificationResult.success) {
-              toast.success('Payment successful! 🎉');
-              
-              // Navigate to orders page with the new order ID
-              navigate('/enhanced-orders', { 
-                state: { 
-                  newOrderId: orderData.orderId,
-                  justPlaced: true,
-                  paymentInfo: {
-                    paymentId: response.razorpay_payment_id,
-                    razorpayOrderId: response.razorpay_order_id
-                  }
-                }
-              });
-            } else {
-              throw new Error('Payment verification failed');
-            }
-          } catch (verifyError) {
-            console.error('Payment verification error:', verifyError);
-            // Even if verification fails, consider payment successful for demo
-            toast.success('Payment completed! 🎉');
+            const orderId = orderResponse.orderId || orderResponse.order?.id;
+            
+            toast.success('Payment successful! Order placed! 🎉');
+            
+            // Navigate to orders page
             navigate('/enhanced-orders', { 
               state: { 
-                newOrderId: orderData.orderId,
+                newOrderId: orderId,
                 justPlaced: true,
                 paymentInfo: {
-                  paymentId: response.razorpay_payment_id,
-                  razorpayOrderId: response.razorpay_order_id
+                  paymentId: paymentResponse.paymentId,
+                  razorpayOrderId: paymentResponse.orderId
                 }
               }
             });
+          } catch (orderError) {
+            console.error('Order placement failed after successful payment:', orderError);
+            toast.error('Payment successful but order placement failed. Please contact support.');
           }
-        } catch (error) {
-          console.error('Payment handler error:', error);
-          toast.error('Payment processing failed. Please try again.');
-        }
-      },
-      modal: {
-        ondismiss: function() {
-          console.log('Payment modal dismissed by user');
-          toast.info('Payment cancelled. You can try again or choose Cash on Delivery.');
+          setPlacing(false);
+        },
+        onFailure: (error) => {
+          // Do not place order on payment failure
+          console.error('Payment failed:', error);
+          toast.error('Payment failed: ' + error);
           setPlacing(false);
         }
-      },
-      prefill: {
-        name: user?.fullName || '',
-        email: user?.email || '',
-        contact: user?.contactNumber || ''
-      },
-      notes: {
-        address: deliveryAddress,
-        userId: user?.id
-      },
-      theme: {
-        color: '#16a34a'
-      }
-    };
-    
-    try {
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-      return true;
+      });
     } catch (error) {
-      console.error('Error opening Razorpay:', error);
-      toast.error('Payment gateway error. Switching to Cash on Delivery.');
-      setPaymentMethod('COD');
-      return false;
+      console.error('Payment initialization error:', error);
+      toast.error('Failed to initialize payment');
+      setPlacing(false);
     }
   };
 
@@ -191,94 +130,32 @@ const EnhancedCheckoutPage = () => {
 
     try {
       setPlacing(true);
-      
-      // Place order
-      console.log('About to place order with user ID:', user.id, 'type:', typeof user.id);
-      console.log('Delivery address:', deliveryAddress);
-      console.log('Payment method:', paymentMethod);
-      
-      const orderResponse = await enhancedOrderService.placeOrderFromCart(
-        user.id, 
-        deliveryAddress, 
-        paymentMethod
-      );
-      
-      console.log('Order placed:', orderResponse);
-      
-      const orderId = orderResponse.orderId || orderResponse.order?.id;
-      
+
       if (paymentMethod === 'ONLINE') {
-        try {
-          // Try to create Razorpay order through payment service
-          let razorpayOrderData;
-          
-          try {
-            razorpayOrderData = await paymentService.createOrder(
-              totalAmount,
-              orderId,
-              user.id
-            );
-            console.log('Created Razorpay order:', razorpayOrderData);
-          } catch (createOrderError) {
-            console.error('Failed to create Razorpay order:', createOrderError);
-            
-            // Create a fallback mock order for testing
-            razorpayOrderData = {
-              id: 'order_' + Math.random().toString(36).substring(2, 15),
-              amount: Math.round(totalAmount * 100), // Convert to paise
-              currency: 'INR',
-              status: 'created',
-              key: 'rzp_test_cSaPgCCDgkPbkb',
-              orderId: orderId,
-              amount_due: Math.round(totalAmount * 100),
-              receipt: 'order_' + orderId
-            };
-            console.log('Using fallback mock Razorpay order:', razorpayOrderData);
+        // Handle online payment - order will be placed only after successful payment
+        await handleOnlinePayment();
+      } else {
+        // Handle COD - place order immediately
+        const orderResponse = await enhancedOrderService.placeOrderFromCart(
+          user.id, 
+          deliveryAddress, 
+          'COD'
+        );
+        
+        const orderId = orderResponse.orderId || orderResponse.order?.id;
+        
+        toast.success('Order placed successfully! 🎉');
+        
+        // Navigate to orders page
+        navigate('/enhanced-orders', { 
+          state: { 
+            newOrderId: orderId,
+            justPlaced: true,
+            paymentMethod: 'COD'
           }
-          
-          // Open Razorpay payment modal
-          const paymentResult = await handleRazorpayPayment(razorpayOrderData);
-          
-          if (!paymentResult) {
-            // Payment modal failed to open, fallback to COD
-            console.log('Payment modal failed, falling back to COD');
-            setPaymentMethod('COD');
-            toast.info('Switched to Cash on Delivery due to payment gateway issues.');
-            
-            // Continue with COD flow below
-          } else {
-            // The navigation happens in the payment handler function
-            setPlacing(false);
-            return;
-          }
-        } catch (paymentError) {
-          console.error('Payment error:', paymentError);
-          toast.error('Payment initialization failed. Your order has been placed as COD instead.');
-          setPaymentMethod('COD');
-          
-          // Continue with COD flow below
-        }
+        });
+        setPlacing(false);
       }
-      
-      // COD flow (also fallback for failed online payments)
-      toast.success('Order placed successfully! 🎉');
-      
-      // CRITICAL FIX: Refresh cart data after successful order (cart should be empty now)
-      try {
-        await fetchCartItems(user.id);
-        console.log('✅ Cart data refreshed after order placement');
-      } catch (refreshError) {
-        console.error('❌ Failed to refresh cart data after order:', refreshError);
-      }
-      
-      // Navigate to orders page with the new order ID
-      navigate('/enhanced-orders', { 
-        state: { 
-          newOrderId: orderId,
-          justPlaced: true,
-          paymentMethod: paymentMethod
-        }
-      });
     } catch (error) {
       console.error('Order error:', error);
       toast.error(error.message || 'Failed to place order');

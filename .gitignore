@@ -17,6 +17,8 @@ target/
 application-local.properties
 application-prod.properties
 application-secrets.properties
+**/application-secrets.properties
+**/application-local.properties
 
 # Environment files
 .env
@@ -30,23 +32,61 @@ application-secrets.properties
 */.env.test
 */.env.production
 
+# Sensitive data files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+secret/
+config/secrets.json
+config/local.json
+**/secrets.json
+**/config/secrets.json
+
+# API Keys and tokens (if accidentally created)
+api-keys.txt
+tokens.txt
+credentials.txt
+
 # Log files
 logs/
 *.log
+**/*.log
 
 # Node modules
 node_modules/
 */node_modules/
+**/node_modules/
 
 # Build directories
 build/
 dist/
 */build/
 */dist/
+**/build/
+**/dist/
 
 # Package files
 *.tgz
 *.tar.gz
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 ### IntelliJ IDEA ###
 .idea

@@ -9,6 +9,7 @@ public class GrocitoApplication {
 	public static void main(String[] args) {
 		System.out.println("Hello World !");
 		SpringApplication.run(GrocitoApplication.class, args);
+		System.out.println("Running...");
 	}
 
 }

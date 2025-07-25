@@ -90,54 +90,63 @@ const CheckoutPage = () => {
 
   const handleOnlinePayment = async () => {
     try {
-      const razorpayOrder = await razorpayService.createOrder(totalAmount);
-      
-      const paymentResult = await razorpayService.initializePayment({
+      await razorpayService.initializePayment({
         amount: totalAmount,
-        orderId: razorpayOrder.id,
+        orderId: 'order_' + Date.now(),
         customerName: user.fullName || user.email,
         customerEmail: user.email,
-        customerPhone: user.contactNumber
-      });
-
-      if (paymentResult.success) {
-        try {
-          await orderService.placeOrderFromCart(user.id, deliveryAddress, 'ONLINE', {
-            paymentId: paymentResult.paymentId,
-            razorpayOrderId: paymentResult.orderId
+        customerPhone: user.contactNumber,
+        onSuccess: async (paymentResponse) => {
+          // Only place order after successful payment
+          try {
+            await orderService.placeOrderFromCart(user.id, deliveryAddress, 'ONLINE', {
+              paymentId: paymentResponse.paymentId,
+              razorpayOrderId: paymentResponse.orderId
+            });
+            
+            navigate('/payment-success', { 
+              state: { 
+                paymentInfo: {
+                  paymentId: paymentResponse.paymentId,
+                  orderId: paymentResponse.orderId,
+                  amount: totalAmount
+                } 
+              },
+              replace: true
+            });
+          } catch (orderError) {
+            console.error('Order placement failed after successful payment:', orderError);
+            // Even if order placement fails, show success since payment was successful
+            navigate('/payment-success', { 
+              state: { 
+                paymentInfo: {
+                  paymentId: paymentResponse.paymentId,
+                  orderId: paymentResponse.orderId,
+                  amount: totalAmount
+                } 
+              },
+              replace: true
+            });
+          }
+        },
+        onFailure: (error) => {
+          // Do not place order on payment failure
+          console.error('Payment failed:', error);
+          navigate('/payment-failed', { 
+            state: { 
+              errorInfo: {
+                message: error,
+                code: 'PAYMENT_FAILED',
+                description: 'Payment could not be processed'
+              }
+            },
+            replace: true
           });
-        } catch (orderError) {
-          console.warn('Order placement failed, but payment was successful:', orderError);
         }
-        
-        navigate('/payment-success', { 
-          state: { 
-            paymentInfo: {
-              paymentId: paymentResult.paymentId,
-              orderId: paymentResult.orderId,
-              amount: totalAmount
-            } 
-          },
-          replace: true
-        });
-      }
+      });
     } catch (error) {
-      console.error('Payment error:', error);
-      
-      if (error.message.includes('cancelled')) {
-        toast.warning('Payment cancelled');
-      } else {
-        navigate('/payment-failed', { 
-          state: { 
-            errorInfo: {
-              message: error.message,
-              code: error.code || 'PAYMENT_ERROR',
-              description: error.description || error.message
-            }
-          },
-          replace: true
-        });
-      }
+      console.error('Payment initialization error:', error);
+      toast.error('Failed to initialize payment');
       throw error;
     }
   };

@@ -15,14 +15,15 @@ const PaymentFailedPage = () => {
   const user = authService.getCurrentUser();
 
   useEffect(() => {
-    if (!location.state?.errorInfo) {
-      // If no error info is provided, redirect to cart page
-      navigate('/cart');
-    }
-  }, [location.state, navigate]);
+    // Show error message
+    toast.error('Payment failed! No order has been placed.', {
+      position: "bottom-right",
+      autoClose: 3000,
+    });
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-white">
       <Header user={user} showCart={true} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -52,7 +53,7 @@ const PaymentFailedPage = () => {
             </div>
 
             {/* Error Details */}
-            <div className="bg-gradient-to-r from-red-50 to-blue-50 rounded-xl p-6 mb-6 border border-red-200">
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-6 mb-6 border border-red-200">
               <h2 className="text-xl font-bold text-gray-800 mb-4">Error Details</h2>
               
               <div className="space-y-3">
@@ -72,13 +73,26 @@ const PaymentFailedPage = () => {
               </div>
             </div>
 
+            {/* Important Notice */}
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+              <div className="flex items-center mb-2">
+                <svg className="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-lg font-bold text-green-800">Good News!</h3>
+              </div>
+              <p className="text-green-700">
+                No money has been deducted from your account. Your order has not been placed.
+              </p>
+            </div>
+
             {/* Message */}
             <div className="text-center mb-8">
               <p className="text-gray-700 text-lg mb-2">
-                Don't worry! No money has been deducted from your account.
+                You can try again with a different payment method or choose Cash on Delivery.
               </p>
               <p className="text-gray-500">
-                You can try again with a different payment method or contact our support team for assistance.
+                If the problem persists, please contact our support team for assistance.
               </p>
             </div>
 
@@ -86,7 +100,7 @@ const PaymentFailedPage = () => {
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <button
                 onClick={() => navigate('/checkout')}
-                className="bg-gradient-to-r from-blue-500 via-yellow-400 to-blue-600 text-white px-6 py-3 rounded-xl font-bold text-lg hover:from-blue-600 hover:via-yellow-500 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-bold text-lg hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />

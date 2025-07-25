@@ -21,9 +21,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './components/Dashboard';
 // import DebugInfo from './components/DebugInfo';
 import TestRedirect from './components/TestRedirect';
-// import PaymentTest from './components/PaymentTest';
-import PaymentSuccess from './components/PaymentSuccess';
-import PaymentFailed from './components/PaymentFailed';
 import PaymentSuccessPage from './components/PaymentSuccessPage';
 import PaymentFailedPage from './components/PaymentFailedPage';
 import EmergencyCartManager from './components/EmergencyCartManager';
@@ -120,8 +117,7 @@ function App() {
               <PaymentFailedPage />
             </ProtectedRoute>
           } />
-          <Route path="/payment-success-legacy" element={<PaymentSuccess />} />
-          <Route path="/payment-failed-legacy" element={<PaymentFailed />} />
+
           <Route path="/emergency-cart" element={<EmergencyCartManager />} />
           <Route path="/simple-cart" element={<SimpleWorkingCart />} />
           <Route path="/not-available" element={<ServiceNotAvailable />} />
@@ -153,7 +149,6 @@ function App() {
           <>
             {/* <TestLogin /> */}
             {/* <DebugInfo /> */}
-            {/* <PaymentTest /> */}
           </>
         )}
       </div>

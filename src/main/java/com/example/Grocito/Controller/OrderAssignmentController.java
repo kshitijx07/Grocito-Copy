@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,7 +64,7 @@ public class OrderAssignmentController {
             
             logger.info("Manually assigning order ID: {} to partner ID: {}", orderId, partnerId);
             
-            OrderAssignment assignment = orderAssignmentService.assignOrderToPartner(orderId, partnerId);
+            OrderAssignment assignment = orderAssignmentService.assignOrderToPartnerNew(orderId, partnerId);
             
             return ResponseEntity.status(HttpStatus.CREATED).body(assignment);
         } catch (Exception e) {
@@ -239,6 +240,64 @@ public class OrderAssignmentController {
             logger.error("Error fetching assignment: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error fetching assignment: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Log customer call to delivery partner
+     */
+    @PostMapping("/{orderId}/call-log")
+    public ResponseEntity<?> logCustomerCall(@PathVariable Long orderId, 
+                                           @RequestBody Map<String, Object> callData) {
+        try {
+            String phoneNumber = (String) callData.get("phoneNumber");
+            String timestamp = (String) callData.get("timestamp");
+            
+            logger.info("Logging customer call for order {} to phone {}", orderId, phoneNumber);
+            
+            // In a real implementation, you would save this to a call_logs table
+            // For now, we'll just log it
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Call logged successfully");
+            response.put("orderId", orderId);
+            response.put("timestamp", timestamp);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error logging call: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error logging call: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Debug endpoint to check all assignments in database
+     */
+    @GetMapping("/debug/all")
+    public ResponseEntity<?> getAllAssignmentsDebug() {
+        try {
+            logger.info("Debug: Fetching all order assignments");
+            
+            List<OrderAssignment> allAssignments = orderAssignmentService.getAllAssignments(null, null);
+            
+            Map<String, Object> debugInfo = new HashMap<>();
+            debugInfo.put("totalAssignments", allAssignments.size());
+            debugInfo.put("assignments", allAssignments);
+            
+            // Log each assignment for debugging
+            for (OrderAssignment assignment : allAssignments) {
+                logger.info("Assignment ID: {}, Order ID: {}, Partner ID: {}, Status: {}", 
+                    assignment.getId(), 
+                    assignment.getOrderId(), 
+                    assignment.getPartnerId(), 
+                    assignment.getStatus());
+            }
+            
+            return ResponseEntity.ok(debugInfo);
+        } catch (Exception e) {
+            logger.error("Error in debug endpoint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Debug error: " + e.getMessage());
         }
     }
 }

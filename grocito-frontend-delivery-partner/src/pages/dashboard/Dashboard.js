@@ -232,9 +232,9 @@ const Dashboard = () => {
 
   if (loading && !dashboardData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-green-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -242,93 +242,91 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Welcome back, {dashboardData?.partner?.fullName || "Partner"}!
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Pincode: {dashboardData?.partner?.pincode} | Status:{" "}
-                {dashboardData?.partner?.verificationStatus}
-              </p>
-            </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Welcome back, {dashboardData?.partner?.fullName || "Partner"}!
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Pincode: {dashboardData?.partner?.pincode} | Status:{" "}
+              {dashboardData?.partner?.verificationStatus}
+            </p>
           </div>
         </div>
-
-        {/* Availability Control Section */}
-        <div className="bg-white rounded-lg shadow mb-8 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Delivery Status
-              </h2>
-              <p className="text-gray-600 mt-1">
-                {isAvailable
-                  ? "You are online and ready to receive orders"
-                  : "You are offline - toggle to start receiving orders"}
-              </p>
-              {stats.activeOrders >= 2 && (
-                <p className="text-orange-600 text-sm mt-1 font-medium">
-                  ⚠️ You have reached the maximum limit of 2 active orders
-                </p>
-              )}
-            </div>
-
-            <AvailabilityToggle
-              isAvailable={isAvailable}
-              onToggle={handleAvailabilityToggle}
-              loading={loading}
-            />
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="mb-8">
-          <StatsCards stats={stats} />
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Active Orders */}
-          <div className="lg:col-span-1">
-            <ActiveOrders
-              orders={activeOrders}
-              onUpdateStatus={handleUpdateOrderStatus}
-              loading={loading}
-              onRefreshOrders={loadDashboardData}
-            />
-          </div>
-
-          {/* Available Orders */}
-          <div className="lg:col-span-1">
-            <AvailableOrders
-              orders={availableOrders}
-              onAcceptOrder={handleAcceptOrder}
-              isAvailable={isAvailable}
-              loading={loading}
-            />
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="mt-8">
-          <RecentActivity partnerId={dashboardData?.partner?.id} />
-        </div>
-
-        {/* Real-time Status Indicator */}
-        {isAvailable && (
-          <div className="fixed bottom-4 right-4">
-            <div className="bg-green-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium">LIVE</span>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Availability Control Section */}
+      <div className="bg-white rounded-lg shadow mb-8 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Delivery Status
+            </h2>
+            <p className="text-gray-600 mt-1">
+              {isAvailable
+                ? "You are online and ready to receive orders"
+                : "You are offline - toggle to start receiving orders"}
+            </p>
+            {stats.activeOrders >= 2 && (
+              <p className="text-orange-600 text-sm mt-1 font-medium">
+                ⚠️ You have reached the maximum limit of 2 active orders
+              </p>
+            )}
+          </div>
+
+          <AvailabilityToggle
+            isAvailable={isAvailable}
+            onToggle={handleAvailabilityToggle}
+            loading={loading}
+          />
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="mb-8">
+        <StatsCards stats={stats} />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Active Orders */}
+        <div className="lg:col-span-1">
+          <ActiveOrders
+            orders={activeOrders}
+            onUpdateStatus={handleUpdateOrderStatus}
+            loading={loading}
+            onRefreshOrders={loadDashboardData}
+          />
+        </div>
+
+        {/* Available Orders */}
+        <div className="lg:col-span-1">
+          <AvailableOrders
+            orders={availableOrders}
+            onAcceptOrder={handleAcceptOrder}
+            isAvailable={isAvailable}
+            loading={loading}
+          />
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="mt-8">
+        <RecentActivity partnerId={dashboardData?.partner?.id} />
+      </div>
+
+      {/* Real-time Status Indicator */}
+      {isAvailable && (
+        <div className="fixed bottom-4 right-4">
+          <div className="bg-green-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <span className="text-sm font-medium">LIVE</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

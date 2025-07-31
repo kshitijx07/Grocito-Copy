@@ -7,6 +7,7 @@ import UserManagement from './components/users/UserManagement';
 import ProductManagement from './components/products/ProductManagement';
 import OrderManagement from './components/orders/OrderManagement';
 import DeliveryPartnerManagement from './components/delivery-partners/DeliveryPartnerManagement';
+import LocationManagement from './components/LocationManagement';
 import AdminRoute from './components/auth/AdminRoute';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -65,6 +66,11 @@ function App() {
           <Route path="/delivery-partners" element={
             <AdminRoute>
               <DeliveryPartnerManagement />
+            </AdminRoute>
+          } />
+          <Route path="/locations" element={
+            <AdminRoute>
+              <LocationManagement />
             </AdminRoute>
           } />
           <Route path="/" element={<Navigate to="/login" replace />} />

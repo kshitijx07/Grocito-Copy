@@ -22,6 +22,9 @@ public class ProductService {
 
     @Autowired
     private ProductRepository productRepo;
+    
+    @Autowired
+    private LocationService locationService;
 
     // Get products by pincode
     public List<Product> getProductsByPincode(String pincode) {
@@ -251,6 +254,62 @@ public class ProductService {
         
         logger.info("Successfully updated stock for {} products", updatedProducts.size());
         return updatedProducts;
+    }
+    
+    // Check service availability for pincode (integrates with LocationService)
+    public java.util.Map<String, Object> checkServiceAvailability(String pincode) {
+        logger.info("Checking service availability for pincode: {}", pincode);
+        
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        
+        try {
+            // Validate pincode format
+            if (!locationService.isValidPincode(pincode)) {
+                response.put("available", false);
+                response.put("message", "Invalid pincode format");
+                return response;
+            }
+            
+            // Get location information (this will fetch from API if not in database)
+            Optional<com.example.Grocito.Entity.Location> location = locationService.getLocationByPincode(pincode);
+            
+            if (location.isPresent()) {
+                com.example.Grocito.Entity.Location loc = location.get();
+                boolean serviceAvailable = loc.getServiceAvailable();
+                
+                response.put("available", serviceAvailable);
+                response.put("pincode", pincode);
+                response.put("areaName", loc.getAreaName());
+                response.put("city", loc.getCity());
+                response.put("state", loc.getState());
+                
+                if (serviceAvailable) {
+                    // Get product count for this pincode
+                    List<Product> products = getProductsByPincode(pincode);
+                    response.put("productCount", products.size());
+                    response.put("message", String.format("Great! We deliver to %s (%s) with %d products available.", 
+                            loc.getAreaName(), pincode, products.size()));
+                } else {
+                    response.put("message", String.format("Sorry, we don't deliver to %s (%s) yet. We'll notify you when we expand to your area!", 
+                            loc.getAreaName(), pincode));
+                }
+                
+                logger.info("Service availability check completed for {}: {}", pincode, serviceAvailable);
+            } else {
+                response.put("available", false);
+                response.put("pincode", pincode);
+                response.put("message", "Unable to verify service availability for this pincode. Please check if the pincode is correct.");
+                logger.warn("Location not found for pincode: {}", pincode);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error checking service availability for pincode: {}", pincode, e);
+            response.put("available", false);
+            response.put("pincode", pincode);
+            response.put("message", "Error checking service availability. Please try again later.");
+        }
+        
+        return response;
     }
 }
 

@@ -11,18 +11,17 @@ export const productService = {
     }
   },
 
-  // Check if service is available for pincode
+  // Check if service is available for pincode (enhanced with location data)
   checkServiceAvailability: async (pincode) => {
     try {
-      const response = await api.get(`/products/pincode/${pincode}`);
-      return {
-        available: response.data && response.data.length > 0,
-        products: response.data
-      };
+      const response = await api.get(`/products/service-availability/${pincode}`);
+      return response.data;
     } catch (error) {
+      console.error('Service availability check failed:', error);
       return {
         available: false,
-        products: []
+        pincode: pincode,
+        message: 'Unable to check service availability. Please try again.'
       };
     }
   },

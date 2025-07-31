@@ -72,7 +72,7 @@ const Login = () => {
             required
             value={formData.emailOrPhone}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500"
             placeholder="Enter your email or phone number"
           />
         </div>
@@ -90,7 +90,7 @@ const Login = () => {
               required
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500"
               placeholder="Enter your password"
             />
             <button
@@ -111,7 +111,7 @@ const Login = () => {
         <div className="text-right">
           <Link
             to="/auth/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-500"
+            className="text-sm text-green-600 hover:text-green-500"
           >
             Forgot your password?
           </Link>
@@ -121,7 +121,7 @@ const Login = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <div className="flex items-center">
@@ -143,7 +143,7 @@ const Login = () => {
           Don't have an account?{' '}
           <Link
             to="/auth/register"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium text-green-600 hover:text-green-500"
           >
             Register as a delivery partner
           </Link>

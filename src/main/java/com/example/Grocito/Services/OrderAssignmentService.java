@@ -2,8 +2,12 @@ package com.example.Grocito.Services;
 
 import com.example.Grocito.Entity.Order;
 import com.example.Grocito.Entity.DeliveryPartnerAuth;
+import com.example.Grocito.Entity.DeliveryPartner;
+import com.example.Grocito.Entity.OrderAssignment;
 import com.example.Grocito.Repository.OrderRepository;
 import com.example.Grocito.Repository.DeliveryPartnerAuthRepository;
+import com.example.Grocito.Repository.DeliveryPartnerRepository;
+import com.example.Grocito.Repository.OrderAssignmentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +26,9 @@ public class OrderAssignmentService {
     
     @Autowired
     private OrderRepository orderRepository;
+    
+    @Autowired
+    private EmailService emailService;
     
     @Autowired
     private DeliveryPartnerAuthRepository deliveryPartnerRepository;
@@ -278,6 +285,15 @@ public class OrderAssignmentService {
                         logger.info("Partner {} is now available again (has {} active orders)", partnerId, remainingActiveOrders);
                     }
                 }
+                
+                // CRITICAL: Send delivery receipt email after successful delivery
+                logger.info("📧 Triggering delivery receipt email for order ID: {} delivered by partner: {}", orderId, partnerId);
+                try {
+                    emailService.sendDeliveryReceiptEmail(order);
+                } catch (Exception e) {
+                    logger.error("Failed to send delivery receipt email for order ID: {} - {}", orderId, e.getMessage());
+                    // Don't fail the delivery process if email fails
+                }
                 break;
             case "CANCELLED":
                 order.setCancelledAt(LocalDateTime.now());
@@ -422,16 +438,8 @@ public class OrderAssignmentService {
                                "vehicle_number = VALUES(vehicle_number), driving_license = VALUES(driving_license), " +
                                "verification_status = VALUES(verification_status), updated_at = VALUES(updated_at)";
                     
-                    // Execute the SQL using JPA EntityManager
-                    jakarta.persistence.EntityManager entityManager = 
-                        ((org.springframework.orm.jpa.JpaTransactionManager) 
-                         org.springframework.transaction.support.TransactionSynchronizationManager
-                         .getResource(org.springframework.orm.jpa.EntityManagerFactoryUtils
-                         .getTransactionalEntityManager(
-                             ((org.springframework.orm.jpa.JpaTransactionManager) 
-                              org.springframework.transaction.support.TransactionSynchronizationManager
-                              .getResource(orderRepository)).getEntityManagerFactory())))
-                        .getEntityManager();
+                    // Simplified approach - just log for now
+                    // TODO: Implement proper entity manager access if needed
                     
                     // For now, just log the sync attempt
                     logger.info("Would sync partner {} (ID: {}) to delivery_partners table", 
@@ -482,5 +490,224 @@ public class OrderAssignmentService {
         dashboardData.put("isAvailable", isAvailable);
         
         return dashboardData;
+    }
+
+    // Add missing methods required by OrderAssignmentController
+    
+    @Autowired
+    private OrderAssignmentRepository orderAssignmentRepository;
+    
+    @Autowired
+    private DeliveryPartnerRepository deliveryPartnerRepository2; // Avoid naming conflict
+    
+    /**
+     * Automatically assign order to best available partner
+     */
+    @Transactional
+    public OrderAssignment assignOrderAutomatically(Long orderId) {
+        logger.info("Auto-assigning order ID: {}", orderId);
+        
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        if (!orderOpt.isPresent()) {
+            throw new RuntimeException("Order not found with ID: " + orderId);
+        }
+        
+        Order order = orderOpt.get();
+        String pincode = order.getPincode();
+        
+        // Get available partners for this pincode
+        List<Long> availablePartners = getAvailablePartners(pincode);
+        if (availablePartners.isEmpty()) {
+            throw new RuntimeException("No available delivery partners for pincode: " + pincode);
+        }
+        
+        // Select the first available partner (can be enhanced with better logic)
+        Long selectedPartnerId = availablePartners.get(0);
+        
+        // Get the delivery partner
+        Optional<DeliveryPartnerAuth> partnerOpt = deliveryPartnerRepository.findById(selectedPartnerId);
+        if (!partnerOpt.isPresent()) {
+            throw new RuntimeException("Delivery partner not found with ID: " + selectedPartnerId);
+        }
+        
+        // Create assignment
+        DeliveryPartner deliveryPartner = new DeliveryPartner();
+        deliveryPartner.setId(selectedPartnerId);
+        
+        OrderAssignment assignment = new OrderAssignment(order, deliveryPartner);
+        assignment.setStatus("ASSIGNED");
+        
+        return orderAssignmentRepository.save(assignment);
+    }
+    
+    /**
+     * Manually assign order to specific partner - fix return type
+     */
+    @Transactional
+    public OrderAssignment assignOrderToPartnerNew(Long orderId, Long partnerId) {
+        logger.info("Manually assigning order {} to partner {}", orderId, partnerId);
+        
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        if (!orderOpt.isPresent()) {
+            throw new RuntimeException("Order not found with ID: " + orderId);
+        }
+        
+        Optional<DeliveryPartnerAuth> partnerOpt = deliveryPartnerRepository.findById(partnerId);
+        if (!partnerOpt.isPresent()) {
+            throw new RuntimeException("Delivery partner not found with ID: " + partnerId);
+        }
+        
+        Order order = orderOpt.get();
+        DeliveryPartner deliveryPartner = new DeliveryPartner();
+        deliveryPartner.setId(partnerId);
+        
+        OrderAssignment assignment = new OrderAssignment(order, deliveryPartner);
+        assignment.setStatus("ASSIGNED");
+        
+        return orderAssignmentRepository.save(assignment);
+    }
+    
+    /**
+     * Accept order assignment
+     */
+    @Transactional
+    public OrderAssignment acceptOrder(Long assignmentId, Long partnerId) {
+        logger.info("Partner {} accepting assignment {}", partnerId, assignmentId);
+        
+        Optional<OrderAssignment> assignmentOpt = orderAssignmentRepository.findById(assignmentId);
+        if (!assignmentOpt.isPresent()) {
+            throw new RuntimeException("Assignment not found with ID: " + assignmentId);
+        }
+        
+        OrderAssignment assignment = assignmentOpt.get();
+        
+        // Verify the partner owns this assignment
+        if (!assignment.getPartnerId().equals(partnerId)) {
+            throw new RuntimeException("Assignment does not belong to this partner");
+        }
+        
+        if (!"ASSIGNED".equals(assignment.getStatus())) {
+            throw new RuntimeException("Assignment is not in ASSIGNED status");
+        }
+        
+        assignment.acceptAssignment();
+        return orderAssignmentRepository.save(assignment);
+    }
+    
+    /**
+     * Reject order assignment
+     */
+    @Transactional
+    public void rejectOrder(Long assignmentId, Long partnerId, String rejectionReason) {
+        logger.info("Partner {} rejecting assignment {} with reason: {}", partnerId, assignmentId, rejectionReason);
+        
+        Optional<OrderAssignment> assignmentOpt = orderAssignmentRepository.findById(assignmentId);
+        if (!assignmentOpt.isPresent()) {
+            throw new RuntimeException("Assignment not found with ID: " + assignmentId);
+        }
+        
+        OrderAssignment assignment = assignmentOpt.get();
+        
+        // Verify the partner owns this assignment
+        if (!assignment.getPartnerId().equals(partnerId)) {
+            throw new RuntimeException("Assignment does not belong to this partner");
+        }
+        
+        if (!"ASSIGNED".equals(assignment.getStatus())) {
+            throw new RuntimeException("Assignment is not in ASSIGNED status");
+        }
+        
+        assignment.rejectAssignment(rejectionReason);
+        orderAssignmentRepository.save(assignment);
+    }
+    
+    /**
+     * Update order status during delivery - fix parameter order
+     */
+    @Transactional
+    public OrderAssignment updateOrderStatus(Long assignmentId, Long partnerId, String newStatus) {
+        logger.info("Partner {} updating assignment {} to status {}", partnerId, assignmentId, newStatus);
+        
+        Optional<OrderAssignment> assignmentOpt = orderAssignmentRepository.findById(assignmentId);
+        if (!assignmentOpt.isPresent()) {
+            throw new RuntimeException("Assignment not found with ID: " + assignmentId);
+        }
+        
+        OrderAssignment assignment = assignmentOpt.get();
+        
+        // Verify the partner owns this assignment
+        if (!assignment.getPartnerId().equals(partnerId)) {
+            throw new RuntimeException("Assignment does not belong to this partner");
+        }
+        
+        // Update status based on the new status
+        switch (newStatus.toUpperCase()) {
+            case "PICKED_UP":
+                assignment.markPickedUp();
+                break;
+            case "OUT_FOR_DELIVERY":
+                assignment.markOutForDelivery();
+                break;
+            case "DELIVERED":
+                assignment.markDelivered();
+                break;
+            default:
+                assignment.setStatus(newStatus);
+                break;
+        }
+        
+        return orderAssignmentRepository.save(assignment);
+    }
+    
+    /**
+     * Get assignments for a delivery partner
+     */
+    public List<OrderAssignment> getPartnerAssignments(Long partnerId, String status) {
+        logger.info("Fetching assignments for partner {} with status {}", partnerId, status);
+        
+        if (status != null && !status.trim().isEmpty()) {
+            return orderAssignmentRepository.findByStatusAndDeliveryPartnerId(status, partnerId);
+        } else {
+            return orderAssignmentRepository.findByDeliveryPartnerId(partnerId);
+        }
+    }
+    
+    /**
+     * Get assignment by order ID with delivery partner details
+     */
+    @Transactional(readOnly = true)
+    public Optional<OrderAssignment> getAssignmentByOrderId(Long orderId) {
+        logger.info("Fetching assignment for order ID: {}", orderId);
+        Optional<OrderAssignment> assignmentOpt = orderAssignmentRepository.findByOrder_Id(orderId);
+        
+        if (assignmentOpt.isPresent()) {
+            OrderAssignment assignment = assignmentOpt.get();
+            // Force loading of delivery partner to avoid lazy loading issues
+            if (assignment.getDeliveryPartner() != null) {
+                logger.debug("Loading delivery partner details for assignment: {}", assignment.getId());
+                // Access delivery partner properties to trigger loading
+                assignment.getDeliveryPartner().getFullName();
+                assignment.getDeliveryPartner().getPhoneNumber();
+            }
+        }
+        
+        return assignmentOpt;
+    }
+    
+    /**
+     * Get all assignments with filtering
+     */
+    public List<OrderAssignment> getAllAssignments(String status, String pincode) {
+        logger.info("Fetching all assignments with status: {} and pincode: {}", status, pincode);
+        
+        if (status != null && !status.trim().isEmpty() && pincode != null && !pincode.trim().isEmpty()) {
+            return orderAssignmentRepository.findByPincodeAndStatus(pincode, status);
+        } else if (status != null && !status.trim().isEmpty()) {
+            return orderAssignmentRepository.findByStatus(status);
+        } else if (pincode != null && !pincode.trim().isEmpty()) {
+            return orderAssignmentRepository.findByPincode(pincode);
+        } else {
+            return orderAssignmentRepository.findAll();
+        }
     }
 }

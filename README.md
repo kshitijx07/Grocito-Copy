@@ -15,6 +15,7 @@ Inspired by Blinkit, Grocito includes essential features such as product discove
 ## ✨ Key Features
 
 ### 👤 User
+
 - Location-based onboarding (pincode check)
 - Browse and search products
 - Smart cart management
@@ -23,12 +24,14 @@ Inspired by Blinkit, Grocito includes essential features such as product discove
 - Wishlist and reordering functionality
 
 ### 🛠️ Admin
+
 - Manage products and inventory by pincode/warehouse
 - View, update, and cancel orders
 - Assign delivery agents
 - Analytics dashboard (sales, top items, users, etc.)
 
 ### 🚚 Delivery Partner
+
 - View assigned orders
 - Update delivery status
 - Simulate real-time location updates
@@ -37,56 +40,61 @@ Inspired by Blinkit, Grocito includes essential features such as product discove
 
 ## 🏗️ Tech Stack
 
-| Layer           | Technology              |
-|----------------|--------------------------|
-| **Frontend**    | React.js, Tailwind CSS   |
-| **Backend**     | Java, Spring Boot        |
-| **Database**    | MySQL        |
-| **Authentication** | JWT, Spring Security |
-| **API Format**  | RESTful APIs             |
-| **Tools**       | Postman, Git, GitHub     |
+| Layer              | Technology             |
+| ------------------ | ---------------------- |
+| **Frontend**       | React.js, Tailwind CSS |
+| **Backend**        | Java, Spring Boot      |
+| **Database**       | MySQL                  |
+| **Authentication** | JWT, Spring Security   |
+| **API Format**     | RESTful APIs           |
+| **Tools**          | Postman, Git, GitHub   |
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Java 17+
 - Node.js 16+
 - MySQL 8.0+
 - Maven 3.6+
 
 ### Setup Instructions
+
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/Grocito-Copy.git
    cd Grocito-Copy
    ```
 
 2. **Backend Setup:**
+
    ```bash
    # Configure database credentials
    cp src/main/resources/application-secrets.properties.template src/main/resources/application-secrets.properties
-   
+
    # Edit the file with your MySQL credentials
    # Create database: CREATE DATABASE grocito_db;
-   
+
    # Run backend
    ./mvnw spring-boot:run
    ```
 
 3. **Frontend Setup:**
+
    ```bash
    # Admin Panel
    cd grocito-frontend-admin
    npm install
    npm start
-   
+
    # Customer App (in new terminal)
    cd grocito-frontend/frontend
    npm install
    npm start
-   
+
    # Delivery Partner App (in new terminal)
    cd grocito-frontend-delivery-partner
    npm install
@@ -98,7 +106,5 @@ Inspired by Blinkit, Grocito includes essential features such as product discove
    - Customer App: http://localhost:3000
    - Admin Panel: http://localhost:3001
    - Delivery Partner: http://localhost:3002
-
-📖 **For detailed setup instructions, see [REPOSITORY_SETUP_GUIDE.md](REPOSITORY_SETUP_GUIDE.md)**
 
 ---

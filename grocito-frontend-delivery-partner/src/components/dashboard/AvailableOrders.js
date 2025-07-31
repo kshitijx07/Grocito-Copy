@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const AvailableOrders = ({ orders, onAcceptOrder, isAvailable, loading }) => {
+const AvailableOrders = ({ orders = [], onAcceptOrder, isAvailable, loading }) => {
   const [acceptingOrder, setAcceptingOrder] = useState(null);
 
   const handleAcceptOrder = async (orderId) => {
@@ -13,13 +13,23 @@ const AvailableOrders = ({ orders, onAcceptOrder, isAvailable, loading }) => {
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) {
+      return 'Time not available';
+    }
+    try {
+      return new Date(dateString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid time';
+    }
   };
 
   const formatAddress = (address) => {
+    if (!address || typeof address !== 'string') {
+      return 'Address not available';
+    }
     return address.length > 50 ? address.substring(0, 50) + '...' : address;
   };
 
@@ -81,7 +91,7 @@ const AvailableOrders = ({ orders, onAcceptOrder, isAvailable, loading }) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span className="text-sm text-gray-700">{formatAddress(order.deliveryAddress)}</span>
+                        <span className="text-sm text-gray-700">{formatAddress(order.deliveryAddress || order.address)}</span>
                       </div>
                       
                       <div className="flex items-center space-x-2">

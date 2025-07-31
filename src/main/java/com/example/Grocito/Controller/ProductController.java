@@ -316,6 +316,25 @@ public class ProductController {
         }
     }
     
+    // Check service availability for pincode (enhanced with location data)
+    @GetMapping("/service-availability/{pincode}")
+    public ResponseEntity<?> checkServiceAvailability(@PathVariable String pincode) {
+        logger.info("Checking service availability for pincode: {}", pincode);
+        
+        try {
+            java.util.Map<String, Object> serviceData = productService.checkServiceAvailability(pincode);
+            logger.info("Service availability check completed for pincode: {}", pincode);
+            return ResponseEntity.ok(serviceData);
+        } catch (Exception e) {
+            logger.error("Error checking service availability for pincode: {}", pincode, e);
+            java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("available", false);
+            errorResponse.put("pincode", pincode);
+            errorResponse.put("message", "Error checking service availability. Please try again later.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
     // Bulk update stock
     @PatchMapping("/bulk-stock-update")
     public ResponseEntity<?> bulkUpdateStock(@RequestBody List<StockUpdateRequest> updates) {

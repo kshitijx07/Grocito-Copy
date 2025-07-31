@@ -9,6 +9,7 @@ import {
   ArchiveBoxIcon 
 } from '@heroicons/react/24/outline';
 import { authService } from '../api/authService';
+import LocationDisplay from './LocationDisplay';
 
 const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => {
   const navigate = useNavigate();
@@ -40,10 +41,15 @@ const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => 
             </button>
             {pincode && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-2 rounded-xl border border-green-200 shadow-soft">
-                <span className="text-sm font-semibold text-green-700 flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
                   <MapPinIcon className="w-4 h-4 text-green-600" />
-                  <span>Delivering to: <span className="bg-gradient-to-r from-green-100 to-emerald-100 px-3 py-1 rounded-xl font-bold">{pincode}</span></span>
-                </span>
+                  <span className="text-sm font-semibold text-green-700">Delivering to:</span>
+                </div>
+                <LocationDisplay 
+                  pincode={pincode} 
+                  showChangeOption={true}
+                  onLocationChange={() => navigate('/')}
+                />
               </div>
             )}
           </div>
@@ -75,23 +81,6 @@ const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => 
                 <span>Payments</span>
               </button>
             </nav>
-
-            {showCart && (
-              <button
-                onClick={() => navigate('/enhanced-cart')}
-                className="group relative bg-gradient-to-r from-orange-100 to-yellow-100 hover:from-orange-200 hover:to-yellow-200 p-3 rounded-2xl border border-orange-200 transition-all duration-300 transform hover:scale-105 shadow-soft hover:shadow-soft-lg"
-                title="View Cart"
-              >
-                <svg className="w-6 h-6 text-orange-600 group-hover:text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6m0 0h15M17 21a2 2 0 100-4 2 2 0 000 4zM9 21a2 2 0 100-4 2 2 0 000 4z" />
-                </svg>
-                {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center shadow-soft font-bold">
-                    {cartCount > 99 ? '99+' : cartCount}
-                  </span>
-                )}
-              </button>
-            )}
             
             <div className="flex items-center space-x-3 bg-white rounded-2xl px-6 py-3 border border-gray-200 shadow-soft hover:shadow-soft-lg transition-all duration-300">
               <div className="flex items-center space-x-2">
@@ -117,6 +106,23 @@ const Header = ({ user, cartCount = 0, showCart = true, showOrders = true }) => 
                 Logout
               </button>
             </div>
+
+            {showCart && (
+              <button
+                onClick={() => navigate('/enhanced-cart')}
+                className="group relative bg-gradient-to-r from-orange-100 to-yellow-100 hover:from-orange-200 hover:to-yellow-200 p-3 rounded-2xl border border-orange-200 transition-all duration-300 transform hover:scale-105 shadow-soft hover:shadow-soft-lg"
+                title="View Cart"
+              >
+                <svg className="w-6 h-6 text-orange-600 group-hover:text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6m0 0h15M17 21a2 2 0 100-4 2 2 0 000 4zM9 21a2 2 0 100-4 2 2 0 000 4z" />
+                </svg>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center shadow-soft font-bold">
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

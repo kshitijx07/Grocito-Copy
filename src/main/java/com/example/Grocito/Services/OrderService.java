@@ -43,6 +43,12 @@ public class OrderService {
     
     @Autowired
     private CartService cartService;
+    
+    @Autowired
+    private EmailService emailService;
+    
+    @Autowired
+    private OrderAssignmentService orderAssignmentService;
 
     /**
      * Place an order with the provided order details
@@ -102,7 +108,19 @@ public class OrderService {
         }
         
         order.setTotalAmount(orderTotal);
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        
+        // Automatically assign delivery partner after order is saved
+        try {
+            logger.info("Attempting to auto-assign delivery partner for order ID: {}", savedOrder.getId());
+            orderAssignmentService.assignOrderAutomatically(savedOrder.getId());
+            logger.info("Successfully auto-assigned delivery partner for order ID: {}", savedOrder.getId());
+        } catch (Exception e) {
+            logger.warn("Failed to auto-assign delivery partner for order ID: {} - {}", savedOrder.getId(), e.getMessage());
+            // Don't fail the order placement if assignment fails
+        }
+        
+        return savedOrder;
     }
     
     /**
@@ -286,6 +304,18 @@ public class OrderService {
         order.setStatus(status);
         Order updatedOrder = orderRepository.save(order);
         logger.info("Order status successfully updated to '{}' for order ID: {}", status, orderId);
+        
+        // CRITICAL: Send delivery receipt email only after successful delivery
+        if ("DELIVERED".equals(status)) {
+            logger.info("📧 Triggering delivery receipt email for order ID: {}", orderId);
+            try {
+                emailService.sendDeliveryReceiptEmail(updatedOrder);
+            } catch (Exception e) {
+                logger.error("Failed to send delivery receipt email for order ID: {} - {}", orderId, e.getMessage());
+                // Don't fail the delivery process if email fails
+            }
+        }
+        
         return updatedOrder;
     }
     

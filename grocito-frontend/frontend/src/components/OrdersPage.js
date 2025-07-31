@@ -12,6 +12,7 @@ import { enhancedOrderService } from '../api/enhancedOrderService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import Header from './Header';
+import DeliveryPartnerCard from './DeliveryPartnerCard';
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -327,6 +328,17 @@ const OrdersPage = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Delivery Partner Information */}
+                  {(order.status === 'ASSIGNED' || order.status === 'ACCEPTED' || order.status === 'PICKED_UP' || order.status === 'OUT_FOR_DELIVERY' || order.status === 'DELIVERED') && (
+                    <div className="mb-6">
+                      <DeliveryPartnerCard 
+                        orderId={order.id}
+                        orderStatus={order.status}
+                        onRefresh={() => fetchOrders(user?.id, true)}
+                      />
+                    </div>
+                  )}
 
                   {/* Delivery Address & Payment Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

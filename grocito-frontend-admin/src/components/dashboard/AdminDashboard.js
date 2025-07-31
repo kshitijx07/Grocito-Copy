@@ -154,7 +154,7 @@ const AdminDashboard = () => {
         {/* Quick Actions */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 gap-4 ${currentUser?.role === 'SUPER_ADMIN' ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
             <button 
               onClick={() => navigate('/users')}
               className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
@@ -193,6 +193,23 @@ const AdminDashboard = () => {
                 <p className="text-sm text-gray-600">Add and edit products</p>
               </div>
             </button>
+
+            {/* Location Management - Only for SUPER_ADMIN */}
+            {currentUser?.role === 'SUPER_ADMIN' && (
+              <button 
+                onClick={() => navigate('/locations')}
+                className="flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-8 h-8 text-gray-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">Manage Locations</p>
+                  <p className="text-sm text-gray-600">Control service areas</p>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 

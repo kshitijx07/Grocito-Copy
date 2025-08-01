@@ -5,6 +5,7 @@ import api from '../api/config';
 import { toast } from 'react-toastify';
 
 const SignUpPage = () => {
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -18,8 +19,10 @@ const SignUpPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   
-  // Check if pincode is available
+  // Check if pincode and location data are available
   const storedPincode = localStorage.getItem('pincode');
+  const storedAreaName = localStorage.getItem('areaName');
+  const storedCity = localStorage.getItem('city');
 
   const handleChange = (e) => {
     setFormData({
@@ -29,7 +32,21 @@ const SignUpPage = () => {
     setError('');
   };
 
-  const validateForm = () => {
+  const validateStep1 = () => {
+    if (!formData.fullName.trim()) {
+      const errorMsg = 'Full name is required';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return false;
+    }
+    
+    if (!formData.email.trim()) {
+      const errorMsg = 'Email is required';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return false;
+    }
+    
     if (formData.password !== formData.confirmPassword) {
       const errorMsg = 'Passwords do not match';
       setError(errorMsg);
@@ -44,6 +61,10 @@ const SignUpPage = () => {
       return false;
     }
 
+    return true;
+  };
+
+  const validateStep2 = () => {
     if (formData.pincode && !/^[1-9][0-9]{5}$/.test(formData.pincode)) {
       const errorMsg = 'Please enter a valid 6-digit pincode';
       setError(errorMsg);
@@ -61,10 +82,22 @@ const SignUpPage = () => {
     return true;
   };
 
+  const handleNextStep = () => {
+    if (validateStep1()) {
+      setCurrentStep(2);
+      setError('');
+    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(1);
+    setError('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateStep2()) {
       return;
     }
 
@@ -180,10 +213,33 @@ const SignUpPage = () => {
             <span className="text-2xl font-bold text-gray-900">Grocito</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join us for fast grocery delivery</p>
+          <p className="text-gray-600">
+            {currentStep === 1 ? 'Step 1: Basic Information' : 'Step 2: Contact Details'}
+          </p>
+          
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center mt-4 space-x-4">
+            <div className={`flex items-center ${currentStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                currentStep >= 1 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                1
+              </div>
+              <span className="ml-2 text-sm font-medium">Basic Info</span>
+            </div>
+            <div className={`w-8 h-0.5 ${currentStep >= 2 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+            <div className={`flex items-center ${currentStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                2
+              </div>
+              <span className="ml-2 text-sm font-medium">Contact Details</span>
+            </div>
+          </div>
         </div>
 
-        {/* Pincode Info */}
+        {/* Location Info */}
         {storedPincode ? (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
             <div className="flex items-center">
@@ -191,7 +247,19 @@ const SignUpPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="text-sm">Delivering to: <strong>{storedPincode}</strong></span>
+              <div className="text-sm">
+                <span>Delivering to: </span>
+                <div className="font-semibold">
+                  {storedAreaName && storedCity ? (
+                    <>
+                      <span>{storedAreaName}, {storedCity}</span>
+                      <span className="text-green-600 ml-2">({storedPincode})</span>
+                    </>
+                  ) : (
+                    <span>{storedPincode}</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -221,127 +289,149 @@ const SignUpPage = () => {
         )}
 
         {/* Sign Up Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Enter your full name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address *
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Enter your email"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        {currentStep === 1 ? (
+          /* Step 1: Basic Information */
+          <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password *
+                Full Name *
               </label>
               <input
-                type="password"
-                name="password"
-                value={formData.password}
+                type="text"
+                name="fullName"
+                value={formData.fullName}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Password"
+                placeholder="Enter your full name"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirm Password *
+                Email Address *
               </label>
               <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
+                type="email"
+                name="email"
+                value={formData.email}
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Confirm"
+                placeholder="Enter your email"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mobile Number
-            </label>
-            <input
-              type="tel"
-              name="contactNumber"
-              value={formData.contactNumber}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Enter 10-digit mobile number"
-              maxLength="10"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Pincode
-            </label>
-            <input
-              type="text"
-              name="pincode"
-              value={formData.pincode}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Enter your pincode"
-              maxLength="6"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address
-            </label>
-            <textarea
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              rows="2"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-              placeholder="Enter your complete address"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-colors"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Creating account...</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Password"
+                />
               </div>
-            ) : (
-              'Create Account'
-            )}
-          </button>
-        </form>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password *
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Confirm"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-semibold transition-colors"
+            >
+              Continue to Step 2 →
+            </button>
+          </form>
+        ) : (
+          /* Step 2: Contact Details */
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mobile Number
+              </label>
+              <input
+                type="tel"
+                name="contactNumber"
+                value={formData.contactNumber}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Enter 10-digit mobile number"
+                maxLength="10"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pincode
+              </label>
+              <input
+                type="text"
+                name="pincode"
+                value={formData.pincode}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Enter your pincode"
+                maxLength="6"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Address
+              </label>
+              <textarea
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                rows="3"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                placeholder="Enter your complete address"
+              />
+            </div>
+
+            <div className="flex space-x-4">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
+              >
+                ← Back
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold transition-colors"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Creating...</span>
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Sign In Link */}
         <div className="mt-6 text-center">

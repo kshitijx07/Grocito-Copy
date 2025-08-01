@@ -371,13 +371,23 @@ const LandingPage = () => {
             </div>
             <div className="flex space-x-4">
               <button
-                onClick={() => navigate('/login')}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate('/login');
+                }}
                 className="text-gray-600 hover:text-gray-900 font-medium"
               >
                 Login
               </button>
               <button
-                onClick={() => navigate('/signup')}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate('/signup');
+                }}
                 className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-medium"
               >
                 Sign Up
@@ -633,7 +643,12 @@ const LandingPage = () => {
                 <ul className="space-y-3">
                   <li>
                     <button
-                      onClick={() => navigate('/login')}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/login');
+                      }}
                       className="text-gray-300 hover:text-green-400 transition-colors duration-200 flex items-center space-x-2 group"
                     >
                       <span className="w-1.5 h-1.5 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
@@ -641,10 +656,33 @@ const LandingPage = () => {
                     </button>
                   </li>
                   <li>
-                    <a href="#" className="text-gray-300 hover:text-green-400 transition-colors duration-200 flex items-center space-x-2 group">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('FAQs button clicked');
+                        navigate('/faqs');
+                      }}
+                      className="text-gray-300 hover:text-green-400 transition-colors duration-200 flex items-center space-x-2 group"
+                    >
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                      <span>FAQs</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/about');
+                      }}
+                      className="text-gray-300 hover:text-green-400 transition-colors duration-200 flex items-center space-x-2 group"
+                    >
                       <span className="w-1.5 h-1.5 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                       <span>About Us</span>
-                    </a>
+                    </button>
                   </li>
                   <li>
                     <a href="#" className="text-gray-300 hover:text-green-400 transition-colors duration-200 flex items-center space-x-2 group">
@@ -658,12 +696,6 @@ const LandingPage = () => {
                       <span>Blog</span>
                     </a>
                   </li>
-                  <li>
-                    <a href="#" className="text-gray-300 hover:text-green-400 transition-colors duration-200 flex items-center space-x-2 group">
-                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                      <span>Press</span>
-                    </a>
-                  </li>
                 </ul>
               </div>
 
@@ -673,7 +705,12 @@ const LandingPage = () => {
                 <ul className="space-y-3">
                   <li>
                     <button
-                      onClick={() => navigate('/contact')}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/contact');
+                      }}
                       className="text-gray-300 hover:text-blue-400 transition-colors duration-200 flex items-center space-x-2 group"
                     >
                       <span className="w-1.5 h-1.5 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
@@ -681,10 +718,18 @@ const LandingPage = () => {
                     </button>
                   </li>
                   <li>
-                    <a href="#" className="text-gray-300 hover:text-blue-400 transition-colors duration-200 flex items-center space-x-2 group">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/help');
+                      }}
+                      className="text-gray-300 hover:text-blue-400 transition-colors duration-200 flex items-center space-x-2 group"
+                    >
                       <span className="w-1.5 h-1.5 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                       <span>Help Center</span>
-                    </a>
+                    </button>
                   </li>
                   <li>
                     <a href="#" className="text-gray-300 hover:text-blue-400 transition-colors duration-200 flex items-center space-x-2 group">
@@ -699,10 +744,18 @@ const LandingPage = () => {
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="text-gray-300 hover:text-blue-400 transition-colors duration-200 flex items-center space-x-2 group">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/faqs');
+                      }}
+                      className="text-gray-300 hover:text-blue-400 transition-colors duration-200 flex items-center space-x-2 group"
+                    >
                       <span className="w-1.5 h-1.5 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                       <span>FAQs</span>
-                    </a>
+                    </button>
                   </li>
                 </ul>
               </div>
@@ -712,21 +765,37 @@ const LandingPage = () => {
                 <h3 className="text-lg font-semibold mb-6 text-white">Business</h3>
                 <ul className="space-y-3">
                   <li>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/become-seller');
+                      }}
+                      className="text-gray-300 hover:text-purple-400 transition-colors duration-200 flex items-center space-x-2 group"
+                    >
+                      <span className="w-1.5 h-1.5 bg-purple-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                      <span>Become a Seller</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/delivery-partner');
+                      }}
+                      className="text-gray-300 hover:text-purple-400 transition-colors duration-200 flex items-center space-x-2 group"
+                    >
+                      <span className="w-1.5 h-1.5 bg-purple-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                      <span>Delivery Partner</span>
+                    </button>
+                  </li>
+                  <li>
                     <a href="#" className="text-gray-300 hover:text-purple-400 transition-colors duration-200 flex items-center space-x-2 group">
                       <span className="w-1.5 h-1.5 bg-purple-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                       <span>Partner with Us</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="text-gray-300 hover:text-purple-400 transition-colors duration-200 flex items-center space-x-2 group">
-                      <span className="w-1.5 h-1.5 bg-purple-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                      <span>Become a Seller</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="text-gray-300 hover:text-purple-400 transition-colors duration-200 flex items-center space-x-2 group">
-                      <span className="w-1.5 h-1.5 bg-purple-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                      <span>Delivery Partner</span>
                     </a>
                   </li>
                   <li>

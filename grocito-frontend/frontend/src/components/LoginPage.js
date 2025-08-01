@@ -13,8 +13,10 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   
-  // Check if pincode is available
+  // Check if pincode and location data are available
   const storedPincode = localStorage.getItem('pincode');
+  const storedAreaName = localStorage.getItem('areaName');
+  const storedCity = localStorage.getItem('city');
 
   const handleChange = (e) => {
     setFormData({
@@ -118,7 +120,7 @@ const LoginPage = () => {
           <p className="text-gray-600">Sign in to your account to continue</p>
         </div>
 
-        {/* Pincode Info */}
+        {/* Location Info */}
         {storedPincode ? (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
             <div className="flex items-center">
@@ -126,7 +128,19 @@ const LoginPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="text-sm">Delivering to: <strong>{storedPincode}</strong></span>
+              <div className="text-sm">
+                <span>Delivering to: </span>
+                <div className="font-semibold">
+                  {storedAreaName && storedCity ? (
+                    <>
+                      <span>{storedAreaName}, {storedCity}</span>
+                      <span className="text-green-600 ml-2">({storedPincode})</span>
+                    </>
+                  ) : (
+                    <span>{storedPincode}</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -211,55 +225,7 @@ const LoginPage = () => {
           </button>
         </form>
 
-        {/* Demo Accounts */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</h3>
-          <div className="text-xs text-gray-600 space-y-1">
-            <div>Admin: admin@grocito.com / admin123</div>
-            <div>User: test@example.com / password123</div>
-          </div>
-          
-          {/* Debug buttons */}
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              onClick={() => {
-                console.log('Manual redirect triggered');
-                const userPincode = localStorage.getItem('pincode') || '110001';
-                localStorage.setItem('token', 'test-token');
-                localStorage.setItem('user', JSON.stringify({ 
-                  id: 1, 
-                  email: 'test@test.com', 
-                  fullName: 'Test User',
-                  role: 'USER',
-                  pincode: userPincode
-                }));
-                navigate('/products', { replace: true });
-              }}
-              className="bg-red-500 text-white py-1 px-2 rounded text-xs"
-            >
-              Debug: React Router
-            </button>
-            
-            <button
-              onClick={() => {
-                console.log('Window location redirect triggered');
-                const userPincode = localStorage.getItem('pincode') || '110001';
-                localStorage.setItem('token', 'test-token');
-                localStorage.setItem('user', JSON.stringify({ 
-                  id: 1, 
-                  email: 'test@test.com', 
-                  fullName: 'Test User',
-                  role: 'USER',
-                  pincode: userPincode
-                }));
-                window.location.href = '/products';
-              }}
-              className="bg-blue-500 text-white py-1 px-2 rounded text-xs"
-            >
-              Debug: Window Location
-            </button>
-          </div>
-        </div>
+
 
         {/* Sign Up Link */}
         <div className="mt-6 text-center">

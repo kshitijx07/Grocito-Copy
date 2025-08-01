@@ -5,6 +5,11 @@ import LoginPage from './components/LoginPage';
 import SignUpPage from './components/SignUpPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ContactUsPage from './components/ContactUsPage';
+import FAQsPage from './components/FAQsPage';
+import HelpCenterPage from './components/HelpCenterPage';
+import AboutUsPage from './components/AboutUsPage';
+import DeliveryPartnerPage from './components/DeliveryPartnerPage';
+import BecomeSellerPage from './components/BecomeSellerPage';
 import ProductsPage from './components/ProductsPage';
 import CartPage from './components/CartPage';
 import CheckoutPage from './components/CheckoutPage';
@@ -82,6 +87,12 @@ function App() {
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/contact" element={<ContactUsPage />} />
+          <Route path="/faqs" element={<FAQsPage />} />
+          <Route path="/help" element={<HelpCenterPage />} />
+          <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/test-faqs" element={<FAQsPage />} />
+          <Route path="/delivery-partner" element={<DeliveryPartnerPage />} />
+          <Route path="/become-seller" element={<BecomeSellerPage />} />
           <Route path="/products" element={
             <ProtectedRoute>
               <ProductsPage />

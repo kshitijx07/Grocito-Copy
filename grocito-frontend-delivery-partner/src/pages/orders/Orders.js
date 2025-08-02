@@ -297,19 +297,30 @@ const Orders = () => {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-600">
-                              <span className="font-medium">Order Amount:</span> ₹{order.totalAmount?.toFixed(2)}
-                            </p>
-                            {order.partnerEarning && (
-                              <p className="text-sm text-green-600 font-medium">
-                                <span className="font-medium">Your Earning:</span> ₹{order.partnerEarning?.toFixed(2)}
-                              </p>
-                            )}
-                            {order.deliveryFee && (
-                              <p className="text-sm text-gray-600">
-                                <span className="font-medium">Delivery Fee:</span> ₹{order.deliveryFee?.toFixed(2)}
-                              </p>
-                            )}
+                            {(() => {
+                              // Calculate correct values based on delivery policy
+                              const subtotal = order.items?.reduce((total, item) => {
+                                const itemPrice = item.price || item.product?.price || 0;
+                                return total + (itemPrice * item.quantity);
+                              }, 0) || 0;
+                              
+                              const deliveryFee = subtotal >= 199 ? 0 : 40;
+                              const partnerEarning = subtotal >= 199 ? 25 : 30;
+                              
+                              return (
+                                <>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">Order Amount:</span> ₹{subtotal.toFixed(2)}
+                                  </p>
+                                  <p className="text-sm text-green-600 font-medium">
+                                    <span className="font-medium">Your Earning:</span> ₹{partnerEarning.toFixed(2)}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">Delivery Fee:</span> {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee.toFixed(2)}`}
+                                  </p>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -349,10 +360,24 @@ const Orders = () => {
                         
                         {order.status === 'DELIVERED' && (
                           <div className="text-right">
-                            <div className="text-lg font-semibold text-green-600">
-                              +₹{order.partnerEarning?.toFixed(2)}
-                            </div>
-                            <div className="text-xs text-gray-500">Earned</div>
+                            {(() => {
+                              // Calculate correct partner earning based on delivery policy
+                              const subtotal = order.items?.reduce((total, item) => {
+                                const itemPrice = item.price || item.product?.price || 0;
+                                return total + (itemPrice * item.quantity);
+                              }, 0) || 0;
+                              
+                              const partnerEarning = subtotal >= 199 ? 25 : 30;
+                              
+                              return (
+                                <>
+                                  <div className="text-lg font-semibold text-green-600">
+                                    +₹{partnerEarning.toFixed(2)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">Earned</div>
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>

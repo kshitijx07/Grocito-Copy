@@ -34,39 +34,48 @@ const AvailableOrders = ({ orders = [], onAcceptOrder, isAvailable, loading }) =
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div className="px-6 py-4 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Available Orders</h3>
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${orders.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
-            <span className="text-sm text-gray-600">{orders.length} orders</span>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Available Orders</h2>
+            <p className="text-gray-600 text-sm mt-1">
+              {isAvailable ? 'New orders ready for pickup' : 'Go online to see available orders'}
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className={`w-3 h-3 rounded-full ${orders.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+            <span className="text-sm font-medium text-gray-700">{orders.length} orders</span>
           </div>
         </div>
       </div>
 
       <div className="p-6">
         {!isAvailable && (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center py-12">
+            <div className="w-20 h-20 mx-auto mb-6 bg-red-50 rounded-full flex items-center justify-center border-2 border-red-200">
+              <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
               </svg>
             </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">You're Offline</h4>
-            <p className="text-gray-600">Toggle your availability to start receiving orders</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">You're Offline</h3>
+            <p className="text-gray-500 max-w-sm mx-auto">
+              Toggle your availability to start receiving new orders from customers.
+            </p>
           </div>
         )}
 
         {isAvailable && orders.length === 0 && (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center py-12">
+            <div className="w-20 h-20 mx-auto mb-6 bg-blue-50 rounded-full flex items-center justify-center border-2 border-blue-200">
+              <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">No Orders Available</h4>
-            <p className="text-gray-600">You're online and ready! New orders will appear here automatically.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Orders Available</h3>
+            <p className="text-gray-500 max-w-sm mx-auto">
+              You're online and ready! New orders will appear here automatically when customers place them.
+            </p>
           </div>
         )}
 

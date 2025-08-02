@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
+import { formatPartnerLocation } from '../../utils/locationUtils';
 import { 
   HomeIcon, 
   ClipboardDocumentListIcon, 
@@ -49,32 +50,33 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:flex-shrink-0">
         <div className="flex flex-col w-64">
-          <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
+          <div className="flex flex-col flex-grow bg-gradient-to-b from-green-600 to-green-700 pt-5 pb-4 overflow-y-auto">
             {/* Logo */}
-            <div className="flex items-center flex-shrink-0 px-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+            <div className="flex items-center flex-shrink-0 px-4 mb-8">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-green-600 font-bold text-xl">G</span>
               </div>
-              <span className="ml-3 text-xl font-semibold text-gray-900">Grocito</span>
+              <div className="ml-3">
+                <span className="text-xl font-bold text-white">Grocito</span>
+                <p className="text-green-100 text-sm">Delivery Partner</p>
+              </div>
             </div>
 
             {/* Partner Info */}
-            <div className="mt-6 px-4">
-              <div className="bg-blue-50 rounded-lg p-3">
+            <div className="px-4 mb-6">
+              <div className="bg-green-500 bg-opacity-30 backdrop-blur-sm rounded-xl p-4 border border-green-400 border-opacity-30">
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md">
+                    <span className="text-green-600 font-bold text-lg">
                       {partner?.fullName?.charAt(0) || 'D'}
                     </span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-semibold text-white">
                       {partner?.fullName || 'Delivery Partner'}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {partner?.pincode || 'Location'}
+                    <p className="text-xs text-green-100">
+                      📍 {formatPartnerLocation(partner)}
                     </p>
                   </div>
                 </div>
@@ -82,16 +84,16 @@ const Sidebar = ({ isOpen, onClose }) => {
             </div>
 
             {/* Navigation */}
-            <nav className="mt-8 flex-1 px-2 space-y-1">
+            <nav className="flex-1 px-3 space-y-2">
               {menuItems.map((item) => (
                 <NavLink
                   key={item.name}
                   to={item.href}
                   className={({ isActive }) =>
-                    `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                    `group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                       isActive
-                        ? 'bg-blue-100 text-blue-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-white text-green-700 shadow-lg'
+                        : 'text-green-100 hover:bg-green-500 hover:bg-opacity-30 hover:text-white'
                     }`
                   }
                 >
@@ -105,10 +107,10 @@ const Sidebar = ({ isOpen, onClose }) => {
             </nav>
 
             {/* Logout */}
-            <div className="px-2 pb-2">
+            <div className="px-3 pb-3">
               <button
                 onClick={handleLogout}
-                className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200"
+                className="group flex items-center w-full px-4 py-3 text-sm font-medium text-green-100 rounded-xl hover:bg-red-500 hover:bg-opacity-20 hover:text-white transition-all duration-200 border border-green-400 border-opacity-30"
               >
                 <ArrowRightOnRectangleIcon
                   className="mr-3 h-5 w-5 flex-shrink-0"
@@ -122,23 +124,24 @@ const Sidebar = ({ isOpen, onClose }) => {
       </div>
 
       {/* Mobile Sidebar */}
-      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out ${
+      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-green-600 to-green-700 transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-green-500 border-opacity-30">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-green-600 font-bold text-xl">G</span>
               </div>
-              <span className="ml-3 text-xl font-semibold text-gray-900">Grocito</span>
+              <div className="ml-3">
+                <span className="text-xl font-bold text-white">Grocito</span>
+                <p className="text-green-100 text-sm">Delivery Partner</p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              className="p-2 rounded-md text-green-100 hover:text-white hover:bg-green-500 hover:bg-opacity-30"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -146,19 +149,19 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           {/* Partner Info */}
           <div className="p-4">
-            <div className="bg-blue-50 rounded-lg p-3">
+            <div className="bg-green-500 bg-opacity-30 backdrop-blur-sm rounded-xl p-4 border border-green-400 border-opacity-30">
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md">
+                  <span className="text-green-600 font-bold text-lg">
                     {partner?.fullName?.charAt(0) || 'D'}
                   </span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-semibold text-white">
                     {partner?.fullName || 'Delivery Partner'}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {partner?.pincode || 'Location'}
+                  <p className="text-xs text-green-100">
+                    📍 {formatPartnerLocation(partner)}
                   </p>
                 </div>
               </div>
@@ -166,17 +169,17 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-2 space-y-1">
+          <nav className="flex-1 px-3 space-y-2">
             {menuItems.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.href}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                  `group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                     isActive
-                      ? 'bg-blue-100 text-blue-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-white text-green-700 shadow-lg'
+                      : 'text-green-100 hover:bg-green-500 hover:bg-opacity-30 hover:text-white'
                   }`
                 }
               >
@@ -190,10 +193,10 @@ const Sidebar = ({ isOpen, onClose }) => {
           </nav>
 
           {/* Logout */}
-          <div className="p-2 border-t border-gray-200">
+          <div className="p-3 border-t border-green-500 border-opacity-30">
             <button
               onClick={handleLogout}
-              className="group flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200"
+              className="group flex items-center w-full px-4 py-3 text-sm font-medium text-green-100 rounded-xl hover:bg-red-500 hover:bg-opacity-20 hover:text-white transition-all duration-200 border border-green-400 border-opacity-30"
             >
               <ArrowRightOnRectangleIcon
                 className="mr-3 h-5 w-5 flex-shrink-0"

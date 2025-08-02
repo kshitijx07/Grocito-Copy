@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { restorePartnerFromToken } from './store/slices/authSlice';
 import AuthLayout from './components/layout/AuthLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/auth/Login';
@@ -14,7 +15,31 @@ import Earnings from './pages/earnings/Earnings';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
-  const { isAuthenticated, partner } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { isAuthenticated, partner, loading } = useSelector((state) => state.auth);
+
+  // Restore partner data on app initialization
+  useEffect(() => {
+    const token = localStorage.getItem('deliveryPartnerToken');
+    if (token && !partner) {
+      dispatch(restorePartnerFromToken());
+    }
+  }, [dispatch, partner]);
+
+  // Show loading screen while restoring partner data
+  if (loading && !partner && localStorage.getItem('deliveryPartnerToken')) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <span className="text-white font-bold text-2xl">G</span>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h2>
+          <p className="text-gray-600">Restoring your session</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="App">

@@ -75,28 +75,38 @@ const RecentActivity = ({ partnerId }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
+            <p className="text-gray-600 text-sm mt-1">Your latest delivery activities and updates</p>
+          </div>
+          <div className="text-sm font-medium text-gray-500">
+            {recentOrders.length} recent activities
+          </div>
+        </div>
       </div>
       
       <div className="p-6">
         {recentOrders.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center py-12">
+            <div className="w-20 h-20 mx-auto mb-6 bg-gray-50 rounded-full flex items-center justify-center border-2 border-gray-200">
+              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">No Recent Activity</h4>
-            <p className="text-gray-600">Your completed deliveries will appear here</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Recent Activity</h3>
+            <p className="text-gray-500 max-w-sm mx-auto">
+              Your completed deliveries and activities will appear here once you start delivering orders.
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {recentOrders.map((order) => (
-              <div key={order.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+              <div key={order.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-xl shadow-sm border border-gray-200">
                     {getStatusIcon(order.status)}
                   </div>
                 </div>

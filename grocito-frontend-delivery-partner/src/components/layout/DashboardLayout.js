@@ -37,7 +37,7 @@ const DashboardLayout = () => {
   }, [location]);
 
   return (
-    <div className="flex h-screen bg-green-50">
+    <div className="flex h-screen bg-gradient-to-br from-green-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -47,105 +47,10 @@ const DashboardLayout = () => {
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-green-50">
-          <div className="container mx-auto px-6 py-8">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <Outlet />
           </div>
-          
-          {/* Footer */}
-          <footer className="bg-white border-t border-gray-200">
-            <div className="container mx-auto px-6 py-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Company Info */}
-                <div>
-                  <div className="flex items-center space-x-2 mb-4">
-                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">G</span>
-                    </div>
-                    <span className="text-xl font-bold text-gray-900">Grocito</span>
-                  </div>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    Delivering fresh groceries to customers across the city. 
-                    Thank you for being part of our delivery team!
-                  </p>
-                </div>
-
-                {/* Quick Links */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
-                  <ul className="space-y-2">
-                    <li>
-                      <a href="/dashboard" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        Dashboard
-                      </a>
-                    </li>
-                    <li>
-                      <a href="/orders" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        My Orders
-                      </a>
-                    </li>
-                    <li>
-                      <a href="/earnings" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        Earnings
-                      </a>
-                    </li>
-                    <li>
-                      <a href="/profile" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        Profile Settings
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Support */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Support</h3>
-                  <ul className="space-y-2">
-                    <li>
-                      <a href="tel:+919876543210" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        📞 +91 98765 43210
-                      </a>
-                    </li>
-                    <li>
-                      <a href="mailto:support@grocito.com" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        ✉️ support@grocito.com
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        📋 Help Center
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#" className="text-gray-600 hover:text-green-600 text-sm transition-colors">
-                        💬 Live Chat
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Bottom Footer */}
-              <div className="border-t border-gray-200 mt-8 pt-6">
-                <div className="flex flex-col sm:flex-row justify-between items-center">
-                  <p className="text-gray-500 text-sm">
-                    © 2024 Grocito. All rights reserved.
-                  </p>
-                  <div className="flex space-x-6 mt-4 sm:mt-0">
-                    <a href="#" className="text-gray-500 hover:text-green-600 text-sm transition-colors">
-                      Privacy Policy
-                    </a>
-                    <a href="#" className="text-gray-500 hover:text-green-600 text-sm transition-colors">
-                      Terms of Service
-                    </a>
-                    <a href="#" className="text-gray-500 hover:text-green-600 text-sm transition-colors">
-                      Partner Guidelines
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </footer>
         </main>
       </div>
 

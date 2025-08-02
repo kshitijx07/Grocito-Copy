@@ -6,6 +6,7 @@ import { enhancedOrderService } from '../api/enhancedOrderService';
 import { razorpayService } from '../api/razorpayService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
+import { deliveryFeeService } from '../services/deliveryFeeService';
 import Header from './Header';
 
 const EnhancedCheckoutPage = () => {
@@ -19,7 +20,8 @@ const EnhancedCheckoutPage = () => {
 
   // Calculate totals
   const subtotal = cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  const deliveryFee = 0; // Free delivery
+  const deliveryInfo = deliveryFeeService.getDeliveryFeeDisplaySync(subtotal);
+  const deliveryFee = deliveryInfo.deliveryFee;
   const totalAmount = subtotal + deliveryFee;
   const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
 
@@ -318,8 +320,15 @@ const EnhancedCheckoutPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Delivery Fee</span>
-                  <span className="text-green-600 font-medium">FREE</span>
+                  <span className={`font-medium ${deliveryInfo.isFreeDelivery ? 'text-green-600' : 'text-gray-900'}`}>
+                    {deliveryInfo.displayText}
+                  </span>
                 </div>
+                {deliveryInfo.promotionText && (
+                  <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                    💡 {deliveryInfo.promotionText}
+                  </div>
+                )}
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between font-bold">
                     <span>Total</span>

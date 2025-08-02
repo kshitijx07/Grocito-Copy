@@ -4,6 +4,7 @@ import { cartService } from '../api/cartService';
 import { orderService } from '../api/orderService';
 import { authService } from '../api/authService';
 import { razorpayService } from '../api/razorpayService';
+import { deliveryFeeService } from '../services/deliveryFeeService';
 import { toast } from 'react-toastify';
 import Header from './Header';
 
@@ -16,11 +17,13 @@ const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const navigate = useNavigate();
 
-  // Calculate totals
+  // Calculate totals - SIMPLE AND BULLETPROOF
   const subtotal = cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  const deliveryFee = 0; // Free delivery
-  const totalAmount = subtotal + deliveryFee;
+  const deliveryInfo = deliveryFeeService.getDeliveryFeeDisplaySync(subtotal);
+  const totalAmount = deliveryInfo.totalAmount;
   const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  console.log('💳 CHECKOUT CALCULATION:', { subtotal, deliveryFee: deliveryInfo.deliveryFee, isFreeDelivery: deliveryInfo.isFreeDelivery });
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
@@ -77,13 +80,26 @@ const CheckoutPage = () => {
 
   const handleCODOrder = async () => {
     try {
-      const order = await orderService.placeOrderFromCart(user.id, deliveryAddress, 'COD');
+      // Include delivery fee information in the order
+      const orderData = {
+        userId: user.id,
+        deliveryAddress,
+        paymentMethod: 'COD',
+        subtotal: subtotal,
+        deliveryFee: deliveryInfo.deliveryFee,
+        totalAmount: deliveryInfo.totalAmount,
+        isFreeDelivery: deliveryInfo.isFreeDelivery
+      };
+      
+      console.log('Placing COD order with delivery fee:', orderData);
+      
+      const order = await orderService.placeOrderFromCart(user.id, deliveryAddress, 'COD', null, orderData);
       toast.success('Order placed successfully! 🎉');
       navigate('/orders');
     } catch (error) {
       console.error('COD order error:', error);
-      // Demo fallback
-      toast.success('COD Order placed successfully! 🎉');
+      // Demo fallback with proper total
+      toast.success(`COD Order placed successfully! Total: ₹${totalAmount.toFixed(2)} 🎉`);
       navigate('/orders');
     }
   };
@@ -99,10 +115,23 @@ const CheckoutPage = () => {
         onSuccess: async (paymentResponse) => {
           // Only place order after successful payment
           try {
+            // Include delivery fee information in the order
+            const orderData = {
+              userId: user.id,
+              deliveryAddress,
+              paymentMethod: 'ONLINE',
+              subtotal: subtotal,
+              deliveryFee: deliveryInfo.deliveryFee,
+              totalAmount: deliveryInfo.totalAmount,
+              isFreeDelivery: deliveryInfo.isFreeDelivery
+            };
+            
+            console.log('Placing online order with delivery fee:', orderData);
+            
             await orderService.placeOrderFromCart(user.id, deliveryAddress, 'ONLINE', {
               paymentId: paymentResponse.paymentId,
               razorpayOrderId: paymentResponse.orderId
-            });
+            }, orderData);
             
             navigate('/payment-success', { 
               state: { 
@@ -424,7 +453,11 @@ const CheckoutPage = () => {
                         </svg>
                         <span>Delivery Fee</span>
                       </span>
-                      <span className="font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full text-sm">FREE</span>
+                      {deliveryInfo.isFreeDelivery ? (
+                        <span className="font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full text-sm">FREE</span>
+                      ) : (
+                        <span className="font-semibold text-red-600">₹{deliveryInfo.deliveryFee}</span>
+                      )}
                     </div>
                     <div className="border-t border-blue-200 pt-3">
                       <div className="flex justify-between items-center">
@@ -434,15 +467,54 @@ const CheckoutPage = () => {
                     </div>
                   </div>
 
-                  {/* Savings Badge */}
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-4">
-                    <div className="flex items-center space-x-2 text-orange-700">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                      </svg>
-                      <span className="font-semibold text-sm">You saved ₹40 on delivery!</span>
+                  {/* Delivery Policy Info */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
+                    <div className="text-center">
+                      <h4 className="font-bold text-blue-800 mb-2">🚚 Delivery Policy</h4>
+                      <div className="text-sm text-blue-700 space-y-1">
+                        <div>Orders ≥₹199: <span className="font-bold text-green-600">FREE Delivery</span></div>
+                        <div>Orders &lt;₹199: <span className="font-bold text-red-600">₹40 Delivery Fee</span></div>
+                      </div>
+                      {/* Current order status */}
+                      <div className="mt-2 pt-2 border-t border-blue-200">
+                        <div className={`text-sm font-semibold ${
+                          deliveryInfo.isFreeDelivery ? 'text-green-700' : 'text-orange-700'
+                        }`}>
+                          Your order: ₹{subtotal.toFixed(2)} → {deliveryInfo.isFreeDelivery ? 'FREE delivery!' : '₹40 delivery fee'}
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Delivery Status Badge */}
+                  {deliveryInfo.savingsText ? (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
+                      <div className="flex items-center space-x-2 text-green-700">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
+                        <span className="font-semibold text-sm">{deliveryInfo.savingsText}</span>
+                      </div>
+                    </div>
+                  ) : deliveryInfo.promotionText ? (
+                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-4 animate-pulse">
+                      <div className="flex items-center space-x-2 text-orange-700">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span className="font-semibold text-sm">{deliveryInfo.promotionText}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 rounded-xl p-4">
+                      <div className="flex items-center space-x-2 text-red-700">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <span className="font-semibold text-sm">₹40 delivery fee applies to this order</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Place Order Button */}

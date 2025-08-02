@@ -96,25 +96,30 @@ const ActiveOrders = ({ orders, onUpdateStatus, loading, onRefreshOrders }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div className="px-6 py-4 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Active Orders</h3>
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${orders.length > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-            <span className="text-sm text-gray-600">{orders.length} active</span>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Active Orders</h2>
+            <p className="text-gray-600 text-sm mt-1">Orders currently in progress</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className={`w-3 h-3 rounded-full ${orders.length > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+            <span className="text-sm font-medium text-gray-700">{orders.length} active</span>
           </div>
         </div>
       </div>
 
       <div className="p-6">
         {orders.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <ClipboardDocumentListIcon className="w-8 h-8 text-gray-400" />
+          <div className="text-center py-12">
+            <div className="w-20 h-20 mx-auto mb-6 bg-gray-50 rounded-full flex items-center justify-center border-2 border-gray-200">
+              <ClipboardDocumentListIcon className="w-10 h-10 text-gray-400" />
             </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">No Active Orders</h4>
-            <p className="text-gray-600">Your accepted orders will appear here</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Orders</h3>
+            <p className="text-gray-500 max-w-sm mx-auto">
+              Your accepted orders will appear here. Accept available orders to start delivering.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">

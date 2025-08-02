@@ -16,6 +16,7 @@ const Dashboard = () => {
   const [activeOrders, setActiveOrders] = useState([]);
   const [availableOrders, setAvailableOrders] = useState([]);
   const [stats, setStats] = useState({});
+  const [completedDeliveries, setCompletedDeliveries] = useState([]);
   const [refreshInterval, setRefreshInterval] = useState(null);
 
   // Load dashboard data
@@ -27,6 +28,7 @@ const Dashboard = () => {
       setActiveOrders(data.activeOrders || []);
       setAvailableOrders(data.availableOrders || []);
       setStats(data.stats || {});
+      setCompletedDeliveries(data.completedDeliveries || []);
     } catch (error) {
       console.error("Error loading dashboard:", error);
 
@@ -48,6 +50,7 @@ const Dashboard = () => {
           todayEarnings: 0,
           totalEarnings: 0,
         },
+        completedDeliveries: [],
       };
 
       setDashboardData(mockData);
@@ -55,6 +58,7 @@ const Dashboard = () => {
       setActiveOrders(mockData.activeOrders);
       setAvailableOrders(mockData.availableOrders);
       setStats(mockData.stats);
+      setCompletedDeliveries(mockData.completedDeliveries);
 
       toast.warn("Using demo data - Backend API not available");
     } finally {
@@ -64,30 +68,22 @@ const Dashboard = () => {
 
   // Toggle availability
   const handleAvailabilityToggle = async (newAvailability) => {
-    console.log("handleAvailabilityToggle called with:", newAvailability);
     try {
       setLoading(true);
-
-      // Try to call the API
       await dashboardAPI.toggleAvailability(newAvailability);
       setIsAvailable(newAvailability);
 
       if (newAvailability) {
         toast.success("You are now ONLINE and available for orders!");
-        // Start real-time updates when going online
         startRealTimeUpdates();
       } else {
         toast.info("You are now OFFLINE");
-        // Stop real-time updates when going offline
         stopRealTimeUpdates();
       }
 
-      // Refresh dashboard data
       await loadDashboardData();
     } catch (error) {
       console.error("Error toggling availability:", error);
-
-      // Fallback: Update state locally for demo purposes
       setIsAvailable(newAvailability);
 
       if (newAvailability) {
@@ -105,8 +101,6 @@ const Dashboard = () => {
     try {
       await ordersAPI.acceptOrder(orderId);
       toast.success("Order accepted successfully!");
-
-      // Refresh dashboard data
       await loadDashboardData();
     } catch (error) {
       console.error("Error accepting order:", error);
@@ -115,7 +109,6 @@ const Dashboard = () => {
       } else {
         toast.error("Failed to accept order");
       }
-      // Refresh to get updated data
       await loadDashboardData();
     }
   };
@@ -133,61 +126,28 @@ const Dashboard = () => {
       };
 
       toast.success(statusMessages[newStatus] || "Order status updated");
-
-      // Refresh dashboard data
       await loadDashboardData();
     } catch (error) {
       console.error("Error updating order status:", error);
+      const errorMessage = error.response?.data?.error || error.message || "Unknown error";
 
-      // Check if this is a payment collection error for COD orders
-      const errorMessage =
-        error.response?.data?.error || error.message || "Unknown error";
-
-      if (
-        errorMessage.includes(
-          "Cannot mark COD order as delivered without collecting payment"
-        ) ||
-        (errorMessage.includes("payment") && errorMessage.includes("collect"))
-      ) {
-        toast.error(
-          "💰 Payment Required: Please collect payment from customer before marking as delivered",
-          {
-            position: "top-center",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          }
-        );
-      } else if (
-        errorMessage.includes("not assigned") ||
-        errorMessage.includes("not eligible")
-      ) {
-        toast.error("❌ You are not authorized to update this order");
-      } else if (errorMessage.includes("Order not found")) {
-        toast.error(
-          "❌ Order not found. It may have been cancelled or completed by another partner"
-        );
+      if (errorMessage.includes("Cannot mark COD order as delivered without collecting payment")) {
+        toast.error("💰 Payment Required: Please collect payment from customer before marking as delivered");
       } else {
         toast.error(`❌ Failed to update order: ${errorMessage}`);
       }
 
-      // Refresh dashboard data to get latest status
       await loadDashboardData();
     }
   };
 
   // Start real-time updates
   const startRealTimeUpdates = () => {
-    if (refreshInterval) return; // Already running
+    if (refreshInterval) return;
 
     const interval = setInterval(async () => {
       try {
-        // Send heartbeat to keep partner alive
         await dashboardAPI.heartbeat();
-
-        // Refresh available orders and stats
         const [availableOrdersData, statsData] = await Promise.all([
           ordersAPI.getAvailableOrders(),
           dashboardAPI.getStats(),
@@ -198,7 +158,7 @@ const Dashboard = () => {
       } catch (error) {
         console.error("Error in real-time update:", error);
       }
-    }, 10000); // Update every 10 seconds
+    }, 10000);
 
     setRefreshInterval(interval);
   };
@@ -214,8 +174,6 @@ const Dashboard = () => {
   // Initialize dashboard
   useEffect(() => {
     loadDashboardData();
-
-    // Cleanup on unmount
     return () => {
       stopRealTimeUpdates();
     };
@@ -232,7 +190,7 @@ const Dashboard = () => {
 
   if (loading && !dashboardData) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
@@ -243,90 +201,101 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Welcome back, {dashboardData?.partner?.fullName || "Partner"}!
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Pincode: {dashboardData?.partner?.pincode} | Status:{" "}
-              {dashboardData?.partner?.verificationStatus}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Availability Control Section */}
-      <div className="bg-white rounded-lg shadow mb-8 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Delivery Status
-            </h2>
-            <p className="text-gray-600 mt-1">
-              {isAvailable
-                ? "You are online and ready to receive orders"
-                : "You are offline - toggle to start receiving orders"}
-            </p>
-            {stats.activeOrders >= 2 && (
-              <p className="text-orange-600 text-sm mt-1 font-medium">
-                ⚠️ You have reached the maximum limit of 2 active orders
+      {/* Professional Header */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="px-8 py-6 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Delivery Dashboard</h1>
+              <p className="text-gray-600 mt-2 text-lg">
+                Welcome back! Monitor your delivery performance and earnings.
               </p>
-            )}
+            </div>
+            <div className="flex items-center space-x-6">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-500">Status</p>
+                <p className={`text-lg font-semibold ${isAvailable ? 'text-green-600' : 'text-red-600'}`}>
+                  {isAvailable ? 'ONLINE' : 'OFFLINE'}
+                </p>
+              </div>
+              <AvailabilityToggle 
+                isAvailable={isAvailable} 
+                onToggle={handleAvailabilityToggle}
+              />
+            </div>
           </div>
-
-          <AvailabilityToggle
-            isAvailable={isAvailable}
-            onToggle={handleAvailabilityToggle}
-            loading={loading}
-          />
+        </div>
+        
+        {/* Key Metrics Row */}
+        <div className="px-8 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Today's Earnings */}
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">
+                ₹{(stats.todayEarnings || 0).toFixed(2)}
+              </div>
+              <div className="text-sm font-medium text-gray-500 mt-1">Today's Earnings</div>
+              <div className="text-xs text-gray-400 mt-1">
+                {stats.todayDeliveries || 0} deliveries completed
+              </div>
+            </div>
+            
+            {/* Active Orders */}
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">
+                {stats.activeOrders || 0}/2
+              </div>
+              <div className="text-sm font-medium text-gray-500 mt-1">Active Orders</div>
+              <div className="text-xs text-gray-400 mt-1">
+                {(stats.activeOrders || 0) >= 2 ? 'Limit reached' : 'Available slots'}
+              </div>
+            </div>
+            
+            {/* Daily Target */}
+            <div className="text-center">
+              <div className={`text-3xl font-bold ${(stats.todayDeliveries || 0) >= 12 ? 'text-green-600' : 'text-orange-600'}`}>
+                {stats.todayDeliveries || 0}/12
+              </div>
+              <div className="text-sm font-medium text-gray-500 mt-1">Daily Target</div>
+              <div className="text-xs text-gray-400 mt-1">
+                {(stats.todayDeliveries || 0) >= 12 ? '₹80 bonus earned!' : `${Math.max(0, 12 - (stats.todayDeliveries || 0))} more for ₹80 bonus`}
+              </div>
+            </div>
+            
+            {/* Average Earnings */}
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600">
+                ₹{(stats.todayDeliveries > 0 ? (stats.todayEarnings / stats.todayDeliveries) : 27.5).toFixed(2)}
+              </div>
+              <div className="text-sm font-medium text-gray-500 mt-1">Per Delivery Avg</div>
+              <div className="text-xs text-gray-400 mt-1">
+                Based on {stats.todayDeliveries || 0} deliveries
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="mb-8">
-        <StatsCards stats={stats} />
-      </div>
-
-      {/* Main Content Grid */}
+      {/* Orders Management Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Active Orders */}
-        <div className="lg:col-span-1">
-          <ActiveOrders
-            orders={activeOrders}
-            onUpdateStatus={handleUpdateOrderStatus}
-            loading={loading}
-            onRefreshOrders={loadDashboardData}
-          />
-        </div>
+        <ActiveOrders 
+          orders={activeOrders}
+          onUpdateStatus={handleUpdateOrderStatus}
+          loading={loading}
+        />
 
-        {/* Available Orders */}
-        <div className="lg:col-span-1">
-          <AvailableOrders
-            orders={availableOrders}
-            onAcceptOrder={handleAcceptOrder}
-            isAvailable={isAvailable}
-            loading={loading}
-          />
-        </div>
+        <AvailableOrders 
+          orders={availableOrders}
+          onAcceptOrder={handleAcceptOrder}
+          loading={loading}
+          isAvailable={isAvailable}
+        />
       </div>
 
-      {/* Recent Activity */}
-      <div className="mt-8">
-        <RecentActivity partnerId={dashboardData?.partner?.id} />
-      </div>
-
-      {/* Real-time Status Indicator */}
-      {isAvailable && (
-        <div className="fixed bottom-4 right-4">
-          <div className="bg-green-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium">LIVE</span>
-          </div>
-        </div>
-      )}
+      {/* Recent Activity Section */}
+      <RecentActivity 
+        activities={completedDeliveries}
+      />
     </div>
   );
 };

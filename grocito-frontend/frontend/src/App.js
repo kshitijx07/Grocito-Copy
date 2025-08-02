@@ -10,6 +10,9 @@ import HelpCenterPage from './components/HelpCenterPage';
 import AboutUsPage from './components/AboutUsPage';
 import DeliveryPartnerPage from './components/DeliveryPartnerPage';
 import BecomeSellerPage from './components/BecomeSellerPage';
+import DeliveryPolicyDemo from './components/DeliveryPolicyDemo';
+import DeliveryFeeTest from './components/DeliveryFeeTest';
+import DeliveryFeeDebug from './components/DeliveryFeeDebug';
 import ProductsPage from './components/ProductsPage';
 import CartPage from './components/CartPage';
 import CheckoutPage from './components/CheckoutPage';
@@ -93,6 +96,9 @@ function App() {
           <Route path="/test-faqs" element={<FAQsPage />} />
           <Route path="/delivery-partner" element={<DeliveryPartnerPage />} />
           <Route path="/become-seller" element={<BecomeSellerPage />} />
+          <Route path="/delivery-policy-demo" element={<DeliveryPolicyDemo />} />
+          <Route path="/delivery-fee-test" element={<DeliveryFeeTest />} />
+          <Route path="/delivery-debug" element={<DeliveryFeeDebug />} />
           <Route path="/products" element={
             <ProtectedRoute>
               <ProductsPage />

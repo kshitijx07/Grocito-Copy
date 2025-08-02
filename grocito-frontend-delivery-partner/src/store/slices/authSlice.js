@@ -54,9 +54,53 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
+// Restore partner data from token
+export const restorePartnerFromToken = createAsyncThunk(
+  'auth/restorePartnerFromToken',
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('deliveryPartnerToken');
+      if (!token) {
+        throw new Error('No token found');
+      }
+      
+      // Try to get partner data from localStorage first
+      const storedPartner = localStorage.getItem('deliveryPartnerData');
+      if (storedPartner) {
+        return { partner: JSON.parse(storedPartner), token };
+      }
+      
+      // If no stored data, fetch from API
+      const response = await authAPI.getProfile();
+      
+      // Store partner data in localStorage
+      localStorage.setItem('deliveryPartnerData', JSON.stringify(response.partner));
+      
+      return { partner: response.partner, token };
+    } catch (error) {
+      // Clear invalid token
+      localStorage.removeItem('deliveryPartnerToken');
+      localStorage.removeItem('deliveryPartnerData');
+      return rejectWithValue('Session expired');
+    }
+  }
+);
+
+// Helper function to get stored partner data
+const getStoredPartner = () => {
+  try {
+    const storedPartner = localStorage.getItem('deliveryPartnerData');
+    return storedPartner ? JSON.parse(storedPartner) : null;
+  } catch (error) {
+    console.error('Error parsing stored partner data:', error);
+    localStorage.removeItem('deliveryPartnerData');
+    return null;
+  }
+};
+
 // Initial state
 const initialState = {
-  partner: null,
+  partner: getStoredPartner(),
   token: localStorage.getItem('deliveryPartnerToken'),
   isAuthenticated: !!localStorage.getItem('deliveryPartnerToken'),
   loading: false,
@@ -72,6 +116,7 @@ const authSlice = createSlice({
   reducers: {
     logout: (state) => {
       localStorage.removeItem('deliveryPartnerToken');
+      localStorage.removeItem('deliveryPartnerData');
       state.partner = null;
       state.token = null;
       state.isAuthenticated = false;
@@ -89,6 +134,8 @@ const authSlice = createSlice({
     updatePartnerProfile: (state, action) => {
       if (state.partner) {
         state.partner = { ...state.partner, ...action.payload };
+        // Update localStorage with new partner data
+        localStorage.setItem('deliveryPartnerData', JSON.stringify(state.partner));
       }
     },
   },
@@ -105,6 +152,9 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.partner = action.payload.partner;
         state.error = null;
+        
+        // Store partner data in localStorage
+        localStorage.setItem('deliveryPartnerData', JSON.stringify(action.payload.partner));
       })
       .addCase(loginPartner.rejected, (state, action) => {
         state.loading = false;
@@ -160,6 +210,26 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
         state.passwordResetSuccess = false;
+      })
+      
+      // Restore Partner from Token
+      .addCase(restorePartnerFromToken.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(restorePartnerFromToken.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.token = action.payload.token;
+        state.partner = action.payload.partner;
+        state.error = null;
+      })
+      .addCase(restorePartnerFromToken.rejected, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.token = null;
+        state.partner = null;
+        state.error = action.payload;
       });
   },
 });

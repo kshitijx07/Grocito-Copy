@@ -225,9 +225,16 @@ public class OrderService {
                     product.getName(), itemTotal, product.getPrice(), cartItem.getQuantity());
         }
         
+        // Calculate delivery fee based on order amount
+        double deliveryFee = calculateDeliveryFee(orderTotal);
+        double partnerEarning = calculatePartnerEarning(orderTotal, deliveryFee);
+        
         order.setItems(orderItems);
-        order.setTotalAmount(orderTotal);
-        logger.debug("Order total calculated: ${}", orderTotal);
+        order.setDeliveryFee(deliveryFee);
+        order.setPartnerEarning(partnerEarning);
+        order.setTotalAmount(orderTotal + deliveryFee);
+        logger.debug("Order subtotal: ${}, delivery fee: ${}, total amount: ${}", 
+                orderTotal, deliveryFee, (orderTotal + deliveryFee));
         
         // Save order
         logger.debug("Saving order to database");
@@ -1060,4 +1067,41 @@ public class OrderService {
         } else {
             return days + " day" + (days == 1 ? "" : "s") + " ago";
         }
-    }}
+    }
+    
+    /**
+     * Calculate delivery fee based on order amount
+     * Policy: Free delivery for orders >= ₹199, otherwise ₹40
+     */
+    private double calculateDeliveryFee(double orderAmount) {
+        final double FREE_DELIVERY_THRESHOLD = 199.0;
+        final double DELIVERY_FEE = 40.0;
+        
+        if (orderAmount >= FREE_DELIVERY_THRESHOLD) {
+            logger.debug("Free delivery applied for order amount: ₹{}", orderAmount);
+            return 0.0;
+        } else {
+            logger.debug("Delivery fee of ₹{} applied for order amount: ₹{}", DELIVERY_FEE, orderAmount);
+            return DELIVERY_FEE;
+        }
+    }
+    
+    /**
+     * Calculate partner earning based on order amount and delivery fee
+     * Policy: ₹25 for free delivery orders, ₹30 for paid delivery orders
+     */
+    private double calculatePartnerEarning(double orderAmount, double deliveryFee) {
+        final double FREE_DELIVERY_PARTNER_EARNING = 25.0;
+        final double PAID_DELIVERY_PARTNER_EARNING = 30.0;
+        
+        if (deliveryFee == 0.0) {
+            // Free delivery - partner gets ₹25 from Grocito
+            logger.debug("Partner earning for free delivery: ₹{}", FREE_DELIVERY_PARTNER_EARNING);
+            return FREE_DELIVERY_PARTNER_EARNING;
+        } else {
+            // Paid delivery - partner gets ₹30 from ₹40 delivery fee
+            logger.debug("Partner earning for paid delivery: ₹{}", PAID_DELIVERY_PARTNER_EARNING);
+            return PAID_DELIVERY_PARTNER_EARNING;
+        }
+    }
+}

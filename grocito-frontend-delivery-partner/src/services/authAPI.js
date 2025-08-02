@@ -44,6 +44,12 @@ const authAPI = {
     const response = await api.put(`/delivery-partner-auth/${id}`, updateData);
     return response;
   },
+
+  // Get current partner profile
+  getProfile: async () => {
+    const response = await api.get('/delivery-partner-auth/profile');
+    return response;
+  },
 };
 
 export default authAPI;

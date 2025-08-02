@@ -18,27 +18,20 @@ const Header = ({ onMenuClick }) => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="flex items-center justify-between px-6 py-4">
-        {/* Left side - Logo, Menu button and title */}
+        {/* Left side - Menu button and greeting */}
         <div className="flex items-center">
-          <div className="flex items-center space-x-2 mr-6">
-            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">G</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">Grocito</span>
-            <span className="text-sm text-gray-500 hidden sm:inline">Delivery</span>
-          </div>
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 mr-4"
           >
             <Bars3Icon className="h-6 w-6" />
           </button>
-          <div className="ml-4 lg:ml-0">
+          <div>
             <h1 className="text-xl font-semibold text-gray-900">
               Good {getGreeting()}, {partner?.fullName?.split(' ')[0] || 'Partner'}!
             </h1>
             <p className="text-sm text-gray-500">
-              Ready to deliver? Toggle your availability below.
+              Ready to deliver? Your dashboard awaits.
             </p>
           </div>
         </div>

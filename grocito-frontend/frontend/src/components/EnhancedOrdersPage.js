@@ -4,6 +4,7 @@ import { enhancedOrderService } from '../api/enhancedOrderService';
 import { orderService } from '../api/orderService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
+import { deliveryFeeService } from '../services/deliveryFeeService';
 import Header from './Header';
 
 const EnhancedOrdersPage = () => {
@@ -390,8 +391,45 @@ const EnhancedOrdersPage = () => {
                                             )}
 
                                             <div className="text-right bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-                                                <p className="text-sm text-green-700 font-medium">Total Amount</p>
-                                                <p className="text-2xl font-bold text-green-600">₹{order.totalAmount?.toFixed(2) || '0.00'}</p>
+                                                <div className="space-y-2">
+                                                    {(() => {
+                                                        // Calculate subtotal from order items
+                                                        const subtotal = order.items?.reduce((total, item) => {
+                                                            const itemPrice = item.price || item.product?.price || 0;
+                                                            return total + (itemPrice * item.quantity);
+                                                        }, 0) || 0;
+                                                        
+                                                        // FORCE CORRECT DELIVERY FEE CALCULATION - ignore potentially wrong stored values
+                                                        // Calculate delivery fee based on subtotal (correct policy)
+                                                        const deliveryFee = subtotal >= 199 ? 0 : 40;
+                                                        
+                                                        // Debug logging
+                                                        console.log(`Order #${order.id}: Subtotal=₹${subtotal}, DeliveryFee=₹${deliveryFee}, StoredDeliveryFee=₹${order.deliveryFee}`);
+                                                        
+                                                        const totalAmount = subtotal + deliveryFee;
+                                                        
+                                                        return (
+                                                            <>
+                                                                <div className="flex justify-between items-center text-sm">
+                                                                    <span className="text-green-700">Subtotal:</span>
+                                                                    <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center text-sm">
+                                                                    <span className="text-green-700">Delivery:</span>
+                                                                    <span className={`font-medium ${deliveryFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                                                                        {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee.toFixed(2)}`}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="border-t border-green-200 pt-2">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="text-green-700 font-medium">Total:</span>
+                                                                        <span className="text-xl font-bold text-green-600">₹{totalAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

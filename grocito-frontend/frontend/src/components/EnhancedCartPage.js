@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { enhancedCartService } from '../api/enhancedCartService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
+import { deliveryFeeService } from '../services/deliveryFeeService';
 import Header from './Header';
 import ResetCartButton from './ResetCartButton';
 
@@ -119,7 +120,8 @@ const EnhancedCartPage = () => {
 
   // Calculate totals
   const subtotal = cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  const deliveryFee = 0; // Free delivery
+  const deliveryInfo = deliveryFeeService.getDeliveryFeeDisplaySync(subtotal);
+  const deliveryFee = deliveryInfo.deliveryFee;
   const totalAmount = subtotal + deliveryFee;
   const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
 
@@ -285,11 +287,16 @@ const EnhancedCartPage = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Delivery Fee</span>
-                    <span className="font-semibold text-green-600 flex items-center space-x-1">
-                      <span>FREE</span>
+                    <span className={`font-semibold flex items-center space-x-1 ${deliveryInfo.isFreeDelivery ? 'text-green-600' : 'text-gray-900'}`}>
+                      <span>{deliveryInfo.displayText}</span>
                       <span className="text-lg">🚚</span>
                     </span>
                   </div>
+                  {deliveryInfo.promotionText && (
+                    <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                      💡 {deliveryInfo.promotionText}
+                    </div>
+                  )}
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-gray-900">Total</span>

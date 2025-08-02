@@ -1,17 +1,45 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Bars3Icon, BellIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
+import { Bars3Icon, BellIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { fetchDashboardStats } from '../../store/slices/dashboardSlice';
+import { calculateDailyEarnings, formatCurrency } from '../../utils/earningsCalculator';
+import ordersAPI from '../../services/ordersAPI';
 
 const Header = ({ onMenuClick }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { partner } = useSelector((state) => state.auth);
   const { stats } = useSelector((state) => state.dashboard);
+  const [realTimeEarnings, setRealTimeEarnings] = useState(0);
 
-  // Fetch stats when component mounts or partner changes
+  // Fetch real-time earnings data
+  const loadRealTimeEarnings = async () => {
+    try {
+      const [activeOrders, completedOrders] = await Promise.all([
+        ordersAPI.getMyOrders().catch(() => []),
+        ordersAPI.getCompletedOrders().catch(() => [])
+      ]);
+      
+      const allOrders = [...activeOrders, ...completedOrders];
+      const deliveredOrders = allOrders.filter(order => order.status === 'DELIVERED');
+      
+      const dailyEarnings = calculateDailyEarnings(deliveredOrders);
+      setRealTimeEarnings(dailyEarnings.totalEarnings);
+    } catch (error) {
+      console.error('Error loading real-time earnings:', error);
+    }
+  };
+
+  // Fetch stats and real-time earnings when component mounts
   useEffect(() => {
     if (partner?.id) {
       dispatch(fetchDashboardStats(partner.id));
+      loadRealTimeEarnings();
+      
+      // Update earnings every 30 seconds
+      const interval = setInterval(loadRealTimeEarnings, 30000);
+      return () => clearInterval(interval);
     }
   }, [dispatch, partner?.id]);
 
@@ -38,10 +66,10 @@ const Header = ({ onMenuClick }) => {
 
         {/* Right side - Stats and notifications */}
         <div className="flex items-center space-x-4">
-          {/* Today's Earnings */}
+          {/* Today's Earnings - Real-time */}
           <div className="hidden sm:flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
             <span className="text-green-600 mr-1">₹</span>
-            {stats?.todayEarnings?.toFixed(0) || '0'} Today
+            {realTimeEarnings?.toFixed(0) || '0'} Today
           </div>
 
           {/* Active Orders Badge */}
@@ -60,13 +88,17 @@ const Header = ({ onMenuClick }) => {
             )}
           </button>
 
-          {/* Partner Avatar */}
+          {/* Partner Avatar - Clickable */}
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+            <button
+              onClick={() => navigate('/profile')}
+              className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              title="Go to Profile"
+            >
               <span className="text-white font-semibold text-sm">
                 {partner?.fullName?.charAt(0) || 'D'}
               </span>
-            </div>
+            </button>
           </div>
         </div>
       </div>

@@ -194,6 +194,45 @@ public class DeliveryPartnerAuthService {
     }
     
     /**
+     * Change password for delivery partner
+     */
+    @Transactional
+    public DeliveryPartnerAuth changePassword(Long partnerId, String currentPassword, String newPassword) {
+        logger.info("Changing password for delivery partner ID: {}", partnerId);
+        
+        Optional<DeliveryPartnerAuth> authOpt = authRepository.findById(partnerId);
+        if (!authOpt.isPresent()) {
+            throw new RuntimeException("Delivery partner not found with ID: " + partnerId);
+        }
+        
+        DeliveryPartnerAuth auth = authOpt.get();
+        
+        // Verify current password (plain text comparison like in authentication)
+        if (!currentPassword.equals(auth.getPassword())) {
+            throw new RuntimeException("Invalid current password");
+        }
+        
+        // Validate new password
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new RuntimeException("New password must be at least 8 characters long");
+        }
+        
+        // Check if new password is different from current
+        if (newPassword.equals(auth.getPassword())) {
+            throw new RuntimeException("New password must be different from current password");
+        }
+        
+        // Update password (plain text storage like in resetPassword method)
+        auth.setPassword(newPassword);
+        auth.setUpdatedAt(LocalDateTime.now());
+        
+        DeliveryPartnerAuth updatedAuth = authRepository.save(auth);
+        logger.info("Password changed successfully for delivery partner ID: {}", partnerId);
+        
+        return updatedAuth;
+    }
+
+    /**
      * Get all auth records with filtering
      */
     public List<DeliveryPartnerAuth> getAllAuthRecords(String userRole, String userPincode, String status) {

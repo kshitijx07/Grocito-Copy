@@ -330,15 +330,16 @@ const OrdersPage = () => {
                   </div>
 
                   {/* Delivery Partner Information */}
-                  {(order.status === 'ASSIGNED' || order.status === 'ACCEPTED' || order.status === 'PICKED_UP' || order.status === 'OUT_FOR_DELIVERY' || order.status === 'DELIVERED') && (
-                    <div className="mb-6">
-                      <DeliveryPartnerCard 
-                        orderId={order.id}
-                        orderStatus={order.status}
-                        onRefresh={() => fetchOrders(user?.id, true)}
-                      />
+                  <div className="mb-6">
+                    <div className="bg-red-100 p-2 mb-2 text-xs">
+                      DEBUG: Order Status = "{order.status}" | Order ID = {order.id}
                     </div>
-                  )}
+                    <DeliveryPartnerCard 
+                      orderId={order.id}
+                      orderStatus={order.status}
+                      onRefresh={() => fetchOrders(user?.id, true)}
+                    />
+                  </div>
 
                   {/* Delivery Address & Payment Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import ordersAPI from '../../services/ordersAPI';
 import dashboardAPI from '../../services/dashboardAPI';
-import earningsService from '../../services/earningsService';
-import EarningsBreakdown from '../../components/dashboard/EarningsBreakdown';
+
+import { calculateDailyEarnings, calculateWeeklyEarnings, calculateTotalEarnings, formatCurrency } from '../../utils/earningsCalculator';
 
 const Earnings = () => {
   const [earnings, setEarnings] = useState({});
-  const [earningsHistory, setEarningsHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [refreshInterval, setRefreshInterval] = useState(null);
 
   // Load earnings data
@@ -17,97 +15,69 @@ const Earnings = () => {
     try {
       setLoading(true);
       
-      // Try to get real data from API first
+      // Get real data from multiple sources exactly like Dashboard does
       let orders = [];
       let stats = {};
       
       try {
-        [stats, orders] = await Promise.all([
-          dashboardAPI.getStats(),
-          ordersAPI.getCompletedOrders()
+        const [activeOrders, completedOrders] = await Promise.all([
+          ordersAPI.getMyOrders().catch(() => []),
+          ordersAPI.getCompletedOrders().catch(() => [])
         ]);
-      } catch (error) {
-        console.log('API not available, using mock data for development');
         
-        // Generate realistic mock data for development
-        const mockOrders = [];
-        const today = new Date();
+        // Combine all orders and filter delivered ones
+        const allOrders = [...activeOrders, ...completedOrders];
+        orders = allOrders.filter(order => order.status === 'DELIVERED');
         
-        // Create mock orders for the last 7 days
-        for (let i = 0; i < 15; i++) {
-          const orderDate = new Date(today.getTime() - (Math.random() * 7 * 24 * 60 * 60 * 1000));
-          const orderAmount = Math.floor(Math.random() * 500) + 100; // ₹100-₹600
-          
-          mockOrders.push({
-            id: i + 1,
-            totalAmount: orderAmount,
-            deliveredAt: orderDate.toISOString(),
-            items: [{ 
-              product: { price: orderAmount }, 
-              quantity: 1 
-            }],
-            status: 'DELIVERED',
-            partnerEarning: orderAmount >= 199 ? 25 : 30 // Basic calculation
-          });
+        console.log('Earnings Debug:', {
+          totalDeliveredOrders: orders.length,
+          activeOrders: activeOrders.length,
+          completedOrders: completedOrders.length,
+          sampleOrder: orders[0]
+        });
+        
+        // Try to get stats, but don't fail if not available
+        try {
+          stats = await dashboardAPI.getStats();
+        } catch (statsError) {
+          console.log('Stats API not available, calculating from orders');
+          stats = {};
         }
-        
-        orders = mockOrders;
+      } catch (error) {
+        console.log('Orders API not available, using empty data');
+        orders = [];
+        stats = {};
       }
       
-      // Calculate earnings using the earnings service
-      const today = new Date();
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
-      let todayEarnings = 0;
-      let weekEarnings = 0;
-      let totalEarnings = 0;
-      let todayDeliveries = 0;
-      let weekDeliveries = 0;
-      
-      const processedOrders = orders.map(order => {
-        const orderEarnings = earningsService.calculateDeliveryEarnings(order);
-        const orderDate = new Date(order.deliveredAt || order.orderTime);
-        
-        totalEarnings += orderEarnings.totalEarnings;
-        
-        if (orderDate.toDateString() === today.toDateString()) {
-          todayEarnings += orderEarnings.totalEarnings;
-          todayDeliveries++;
-        }
-        
-        if (orderDate >= weekAgo) {
-          weekEarnings += orderEarnings.totalEarnings;
-          weekDeliveries++;
-        }
-        
-        return {
-          ...order,
-          earnings: orderEarnings,
-          completedAt: order.deliveredAt
-        };
+      // Calculate earnings using unified calculator for consistency
+      console.log('Earnings Debug:', {
+        totalDeliveredOrders: orders.length,
+        sampleOrder: orders[0]
       });
-      
-      // Calculate daily target bonus for today's deliveries
-      const dailyTargetBonus = todayDeliveries >= 12 ? 80 : 0;
-      todayEarnings += dailyTargetBonus;
-      
+
+      // Use unified calculator for consistent results across all components
+      const dailyEarnings = calculateDailyEarnings(orders);
+      const weeklyEarnings = calculateWeeklyEarnings(orders);
+      const totalEarnings = calculateTotalEarnings(orders);
+
       const calculatedEarnings = {
-        todayEarnings: parseFloat(todayEarnings.toFixed(2)),
-        weekEarnings: parseFloat(weekEarnings.toFixed(2)),
-        totalEarnings: parseFloat(totalEarnings.toFixed(2)),
-        todayDeliveries,
-        weekDeliveries,
+        todayEarnings: dailyEarnings.totalEarnings,
+        weekEarnings: weeklyEarnings.totalEarnings,
+        totalEarnings: totalEarnings.totalEarnings,
+        todayDeliveries: dailyEarnings.totalDeliveries,
+        weekDeliveries: weeklyEarnings.totalDeliveries,
         completedDeliveries: orders.length,
-        avgEarningsPerDelivery: orders.length > 0 ? parseFloat((totalEarnings / orders.length).toFixed(2)) : 0,
+        avgEarningsPerDelivery: totalEarnings.averageEarningsPerDelivery,
         activeOrders: stats.activeOrders || 0,
-        cancelledOrders: stats.cancelledOrders || 0
+        cancelledOrders: stats.cancelledOrders || 0,
+        dailyTargetAchieved: dailyEarnings.dailyTargetAchieved,
+        deliveriesNeededForTarget: dailyEarnings.deliveriesNeededForTarget
       };
       
+      console.log('Earnings Calculated Stats:', calculatedEarnings);
       setEarnings(calculatedEarnings);
-      
-      // Process earnings history for the selected period
-      const history = processEarningsHistory(processedOrders, selectedPeriod);
-      setEarningsHistory(history);
+
+      // No need for earnings history processing since we removed EarningsBreakdown
       
     } catch (error) {
       console.error('Error loading earnings data:', error);
@@ -117,92 +87,22 @@ const Earnings = () => {
     }
   };
 
-  // Process earnings history based on selected period
-  const processEarningsHistory = (orders, period) => {
-    const now = new Date();
-    const history = [];
-    
-    // Filter delivered orders only
-    const deliveredOrders = orders.filter(order => order.status === 'DELIVERED');
-    
-    if (period === 'week') {
-      // Last 7 days
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
-        
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-        
-        const dayOrders = deliveredOrders.filter(order => {
-          const orderDate = new Date(order.deliveredAt || order.completedAt);
-          return orderDate >= date && orderDate < nextDate;
-        });
-        
-        // Calculate earnings using the earnings service
-        const dayEarnings = dayOrders.reduce((sum, order) => {
-          const earnings = order.earnings || earningsService.calculateDeliveryEarnings(order);
-          return sum + earnings.totalEarnings;
-        }, 0);
-        
-        history.push({
-          date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-          earnings: parseFloat(dayEarnings.toFixed(2)),
-          orders: dayOrders.length,
-          fullDate: date,
-          completedAt: date.toISOString()
-        });
-      }
-    } else if (period === 'month') {
-      // Last 30 days grouped by week
-      for (let i = 3; i >= 0; i--) {
-        const weekStart = new Date(now);
-        weekStart.setDate(weekStart.getDate() - (i * 7 + 6));
-        weekStart.setHours(0, 0, 0, 0);
-        
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
-        
-        const weekOrders = deliveredOrders.filter(order => {
-          const orderDate = new Date(order.deliveredAt || order.completedAt);
-          return orderDate >= weekStart && orderDate < weekEnd;
-        });
-        
-        // Calculate earnings using the earnings service
-        const weekEarnings = weekOrders.reduce((sum, order) => {
-          const earnings = order.earnings || earningsService.calculateDeliveryEarnings(order);
-          return sum + earnings.totalEarnings;
-        }, 0);
-        
-        history.push({
-          date: `Week ${4 - i}`,
-          earnings: parseFloat(weekEarnings.toFixed(2)),
-          orders: weekOrders.length,
-          fullDate: weekStart,
-          completedAt: weekStart.toISOString()
-        });
-      }
-    }
-    
-    return history;
-  };
+  // Removed processEarningsHistory function since EarningsBreakdown is removed
 
   // Start real-time updates
   const startRealTimeUpdates = () => {
-    const interval = setInterval(loadEarningsData, 60000); // Update every minute
+    const interval = setInterval(async () => {
+      try {
+        console.log('Earnings: Refreshing data...');
+        await loadEarningsData();
+      } catch (error) {
+        console.error('Error in earnings real-time update:', error);
+      }
+    }, 30000); // Update every 30 seconds like Dashboard
     setRefreshInterval(interval);
   };
 
-  // Handle period change
-  const handlePeriodChange = (period) => {
-    setSelectedPeriod(period);
-    if (earningsHistory.length > 0) {
-      // Reprocess existing data
-      const history = processEarningsHistory(earningsHistory, period);
-      setEarningsHistory(history);
-    }
-  };
+  // Removed handlePeriodChange since EarningsBreakdown is removed
 
   // Initialize
   useEffect(() => {
@@ -216,16 +116,9 @@ const Earnings = () => {
     };
   }, []);
 
-  // Recalculate history when period changes
-  useEffect(() => {
-    if (!loading) {
-      loadEarningsData();
-    }
-  }, [selectedPeriod]);
+  // Removed period change effect since EarningsBreakdown is removed
 
-  const formatCurrency = (amount) => {
-    return `₹${(amount || 0).toFixed(2)}`;
-  };
+
 
   if (loading) {
     return (
@@ -242,11 +135,26 @@ const Earnings = () => {
     <div className="space-y-6">
       {/* Header Section */}
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Earnings Overview</h1>
-          <p className="text-gray-600 mt-1">
-            Track your delivery earnings and performance metrics
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Earnings Overview</h1>
+            <p className="text-gray-600 mt-1">
+              Track your delivery earnings and performance metrics
+            </p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-gray-600">Live Updates</span>
+            </div>
+            <button
+              onClick={loadEarningsData}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            >
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -315,11 +223,137 @@ const Earnings = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Earnings Breakdown */}
+        {/* Left Column - Bonus Status and Policy */}
         <div className="space-y-6">
-          <EarningsBreakdown 
-            deliveries={earningsHistory}
-          />
+          {/* Current Bonus Status */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Current Bonus Status</h3>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`p-4 rounded-lg ${(() => {
+                  const now = new Date();
+                  const hour = now.getHours();
+                  const isPeakHour = (hour >= 7 && hour < 10) || (hour >= 18 && hour < 21);
+                  return isPeakHour ? 'bg-orange-100 border border-orange-300' : 'bg-gray-100';
+                })()}`}>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${(() => {
+                      const now = new Date();
+                      const hour = now.getHours();
+                      const isPeakHour = (hour >= 7 && hour < 10) || (hour >= 18 && hour < 21);
+                      return isPeakHour ? 'bg-orange-500' : 'bg-gray-400';
+                    })()}`}></div>
+                    <span className={`font-medium ${(() => {
+                      const now = new Date();
+                      const hour = now.getHours();
+                      const isPeakHour = (hour >= 7 && hour < 10) || (hour >= 18 && hour < 21);
+                      return isPeakHour ? 'text-orange-800' : 'text-gray-600';
+                    })()}`}>
+                      Peak Hours (7-10 AM, 6-9 PM)
+                    </span>
+                  </div>
+                  <div className={`text-sm mt-1 ${(() => {
+                    const now = new Date();
+                    const hour = now.getHours();
+                    const isPeakHour = (hour >= 7 && hour < 10) || (hour >= 18 && hour < 21);
+                    return isPeakHour ? 'text-orange-700' : 'text-gray-500';
+                  })()}`}>
+                    {(() => {
+                      const now = new Date();
+                      const hour = now.getHours();
+                      const isPeakHour = (hour >= 7 && hour < 10) || (hour >= 18 && hour < 21);
+                      return isPeakHour ? '+₹5 per delivery ACTIVE' : 'Not active now';
+                    })()}
+                  </div>
+                </div>
+                
+                <div className={`p-4 rounded-lg ${(() => {
+                  const now = new Date();
+                  const day = now.getDay();
+                  const isWeekend = day === 0 || day === 6;
+                  return isWeekend ? 'bg-purple-100 border border-purple-300' : 'bg-gray-100';
+                })()}`}>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${(() => {
+                      const now = new Date();
+                      const day = now.getDay();
+                      const isWeekend = day === 0 || day === 6;
+                      return isWeekend ? 'bg-purple-500' : 'bg-gray-400';
+                    })()}`}></div>
+                    <span className={`font-medium ${(() => {
+                      const now = new Date();
+                      const day = now.getDay();
+                      const isWeekend = day === 0 || day === 6;
+                      return isWeekend ? 'text-purple-800' : 'text-gray-600';
+                    })()}`}>
+                      Weekend Bonus (Sat & Sun)
+                    </span>
+                  </div>
+                  <div className={`text-sm mt-1 ${(() => {
+                    const now = new Date();
+                    const day = now.getDay();
+                    const isWeekend = day === 0 || day === 6;
+                    return isWeekend ? 'text-purple-700' : 'text-gray-500';
+                  })()}`}>
+                    {(() => {
+                      const now = new Date();
+                      const day = now.getDay();
+                      const isWeekend = day === 0 || day === 6;
+                      return isWeekend ? '+₹3 per delivery ACTIVE' : 'Not active now';
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Earnings Policy */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Earnings Policy</h3>
+            </div>
+            <div className="p-6">
+              <div className="text-sm text-blue-800 space-y-3">
+                <div className="flex items-start space-x-2">
+                  <span className="text-blue-600">•</span>
+                  <div>
+                    <strong className="text-blue-900">Orders ≥₹199:</strong> 
+                    <span className="text-blue-800"> ₹25 per delivery (FREE delivery for customer, paid by Grocito)</span>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-blue-600">•</span>
+                  <div>
+                    <strong className="text-blue-900">Orders &lt;₹199:</strong> 
+                    <span className="text-blue-800"> ₹30 per delivery (Customer pays ₹40 fee, you get 75%)</span>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-blue-600">•</span>
+                  <div>
+                    <strong className="text-blue-900">Daily Target:</strong> 
+                    <span className="text-blue-800"> Complete 12+ deliveries for ₹80 bonus</span>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-blue-600">•</span>
+                  <div>
+                    <strong className="text-blue-900">Peak Hours</strong> 
+                    <span className="text-blue-800">(7-10 AM, 6-9 PM): +₹5 per delivery</span>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-blue-600">•</span>
+                  <div>
+                    <strong className="text-blue-900">Weekends:</strong> 
+                    <span className="text-blue-800"> +₹3 per delivery</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right Column - Performance & Tips */}
@@ -349,7 +383,7 @@ const Earnings = () => {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Best Day Earnings</span>
                 <span className="font-semibold text-orange-600">
-                  {formatCurrency(Math.max(...earningsHistory.map(h => h.earnings), 0))}
+                  {formatCurrency(earnings.todayEarnings || 0)}
                 </span>
               </div>
             </div>

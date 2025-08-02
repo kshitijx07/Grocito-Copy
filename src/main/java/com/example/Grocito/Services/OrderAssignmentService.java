@@ -682,12 +682,30 @@ public class OrderAssignmentService {
         
         if (assignmentOpt.isPresent()) {
             OrderAssignment assignment = assignmentOpt.get();
-            // Force loading of delivery partner to avoid lazy loading issues
+            
+            // CRITICAL FIX: Get delivery partner data from delivery_partner_auth table
             if (assignment.getDeliveryPartner() != null) {
-                logger.debug("Loading delivery partner details for assignment: {}", assignment.getId());
-                // Access delivery partner properties to trigger loading
-                assignment.getDeliveryPartner().getFullName();
-                assignment.getDeliveryPartner().getPhoneNumber();
+                Long partnerId = assignment.getDeliveryPartner().getId();
+                logger.info("Loading delivery partner details from auth table for partner ID: {}", partnerId);
+                
+                // Get the actual partner data from delivery_partner_auth table
+                Optional<DeliveryPartnerAuth> authPartnerOpt = deliveryPartnerRepository.findById(partnerId);
+                if (authPartnerOpt.isPresent()) {
+                    DeliveryPartnerAuth authPartner = authPartnerOpt.get();
+                    
+                    // Update the delivery partner object with real data
+                    DeliveryPartner partner = assignment.getDeliveryPartner();
+                    partner.setFullName(authPartner.getFullName());
+                    partner.setPhoneNumber(authPartner.getPhoneNumber());
+                    partner.setEmail(authPartner.getEmail());
+                    partner.setVehicleType(authPartner.getVehicleType());
+                    partner.setVehicleNumber(authPartner.getVehicleNumber());
+                    partner.setAssignedPincode(authPartner.getPincode());
+                    
+                    logger.info("Successfully loaded partner data: {} - {}", authPartner.getFullName(), authPartner.getPhoneNumber());
+                } else {
+                    logger.warn("No auth data found for partner ID: {}", partnerId);
+                }
             }
         }
         

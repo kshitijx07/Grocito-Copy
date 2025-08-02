@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+    TruckIcon, 
+    PhoneIcon, 
+    ChatBubbleLeftRightIcon, 
+    ClockIcon,
+    CheckIcon
+} from '@heroicons/react/24/outline';
 import { enhancedOrderService } from '../api/enhancedOrderService';
 import { orderService } from '../api/orderService';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import { deliveryFeeService } from '../services/deliveryFeeService';
 import Header from './Header';
+import DeliveryPartnerCard from './DeliveryPartnerCard';
 
 const EnhancedOrdersPage = () => {
     const [orders, setOrders] = useState([]);
@@ -476,6 +484,137 @@ const EnhancedOrdersPage = () => {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Delivery Partner Information */}
+                                    {order.deliveryPartner && (
+                                        <div className="mb-6">
+                                            <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 border border-blue-200 shadow-xl hover:shadow-2xl transition-all duration-300">
+                                                {/* Header */}
+                                                <div className="flex items-center justify-between mb-6">
+                                                    <h4 className="font-bold text-xl text-gray-900 flex items-center space-x-3">
+                                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                                                            <TruckIcon className="w-5 h-5 text-white" />
+                                                        </div>
+                                                        <span>Your Delivery Partner</span>
+                                                    </h4>
+                                                    <span className="px-4 py-2 rounded-xl text-sm font-bold border-2 shadow-sm bg-green-100 text-green-800 border-green-200">
+                                                        {order.status.replace('_', ' ')}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-start space-x-6">
+                                                    {/* Partner Avatar */}
+                                                    <div className="relative">
+                                                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-4 border-white shadow-xl">
+                                                            <span className="text-white font-bold text-2xl">
+                                                                {order.deliveryPartner.fullName?.charAt(0) || 'D'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full border-3 border-white flex items-center justify-center shadow-lg">
+                                                            <CheckIcon className="w-4 h-4 text-white" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Partner Details */}
+                                                    <div className="flex-1">
+                                                        <div className="mb-4">
+                                                            <h5 className="font-bold text-2xl text-gray-900">{order.deliveryPartner.fullName}</h5>
+                                                        </div>
+
+                                                        {/* Vehicle & Contact Info */}
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                                            <div className="flex items-center space-x-3 bg-white rounded-xl px-4 py-3 border shadow-sm">
+                                                                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                                                                    <TruckIcon className="w-4 h-4 text-purple-600" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-gray-500 font-medium">Vehicle</p>
+                                                                    <p className="text-sm font-bold text-gray-900">
+                                                                        {order.deliveryPartner.vehicleType} • {order.deliveryPartner.vehicleNumber}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="flex items-center space-x-3 bg-white rounded-xl px-4 py-3 border shadow-sm">
+                                                                <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
+                                                                    <PhoneIcon className="w-4 h-4 text-green-600" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs text-gray-500 font-medium">Contact</p>
+                                                                    <p className="text-sm font-bold text-gray-900">{order.deliveryPartner.phoneNumber}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Action Buttons */}
+                                                        <div className="flex flex-wrap items-center gap-3">
+                                                            <button
+                                                                onClick={() => {
+                                                                    const confirmCall = window.confirm(
+                                                                        `Call your delivery partner at ${order.deliveryPartner.phoneNumber}?\\n\\nThis will open your phone's dialer.`
+                                                                    );
+                                                                    if (confirmCall) {
+                                                                        window.open(`tel:${order.deliveryPartner.phoneNumber}`, '_self');
+                                                                    }
+                                                                }}
+                                                                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                                                            >
+                                                                <PhoneIcon className="w-4 h-4" />
+                                                                <span>Call Now</span>
+                                                            </button>
+                                                            
+                                                            <button
+                                                                onClick={() => alert('Chat feature coming soon!')}
+                                                                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                                                            >
+                                                                <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                                                                <span>Chat</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Timeline */}
+                                                {order.assignedAt && (
+                                                    <div className="mt-6 pt-6 border-t border-blue-200">
+                                                        <h6 className="font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                                                            <ClockIcon className="w-4 h-4" />
+                                                            <span>Delivery Timeline</span>
+                                                        </h6>
+                                                        <div className="space-y-3">
+                                                            <div className="flex items-center space-x-3">
+                                                                <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                                                                <div className="flex-1 bg-white rounded-lg px-3 py-2 border shadow-sm">
+                                                                    <p className="text-sm font-medium text-gray-900">Partner Assigned</p>
+                                                                    <p className="text-xs text-gray-600">{new Date(order.assignedAt).toLocaleString()}</p>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {order.pickedUpAt && (
+                                                                <div className="flex items-center space-x-3">
+                                                                    <div className="w-3 h-3 bg-purple-500 rounded-full shadow-sm"></div>
+                                                                    <div className="flex-1 bg-white rounded-lg px-3 py-2 border shadow-sm">
+                                                                        <p className="text-sm font-medium text-gray-900">Order Picked Up</p>
+                                                                        <p className="text-xs text-gray-600">{new Date(order.pickedUpAt).toLocaleString()}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {order.deliveredAt && (
+                                                                <div className="flex items-center space-x-3">
+                                                                    <div className="w-3 h-3 bg-green-600 rounded-full shadow-sm"></div>
+                                                                    <div className="flex-1 bg-white rounded-lg px-3 py-2 border shadow-sm">
+                                                                        <p className="text-sm font-medium text-gray-900">Order Delivered</p>
+                                                                        <p className="text-xs text-gray-600">{new Date(order.deliveredAt).toLocaleString()}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Delivery Address & Payment Info */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

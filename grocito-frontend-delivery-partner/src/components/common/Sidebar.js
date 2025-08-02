@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
-import { formatPartnerLocation } from '../../utils/locationUtils';
+import { usePartnerLocation } from '../../hooks/useLocation';
 import { 
   HomeIcon, 
   ClipboardDocumentListIcon, 
@@ -16,6 +16,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { partner } = useSelector((state) => state.auth);
+  const { location, loading } = usePartnerLocation(partner);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -76,7 +77,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                       {partner?.fullName || 'Delivery Partner'}
                     </p>
                     <p className="text-xs text-green-100">
-                      📍 {formatPartnerLocation(partner)}
+                      📍 {loading ? 'Loading location...' : location}
                     </p>
                   </div>
                 </div>
@@ -161,7 +162,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {partner?.fullName || 'Delivery Partner'}
                   </p>
                   <p className="text-xs text-green-100">
-                    📍 {formatPartnerLocation(partner)}
+                    📍 {loading ? 'Loading location...' : location}
                   </p>
                 </div>
               </div>

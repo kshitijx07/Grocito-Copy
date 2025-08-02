@@ -1,26 +1,57 @@
 // Location utility functions for better display
 
 /**
- * Format location with area name and pincode
+ * Format location with area name and pincode (synchronous version)
  * @param {Object} partner - Partner object with location data
  * @returns {string} - Formatted location string
  */
 export const formatPartnerLocation = (partner) => {
   if (!partner) return 'Location not available';
   
-  const area = partner.area || partner.city || getAreaFromPincode(partner.pincode);
+  // Try to get area from partner data first, then from mapping
+  let area = partner.area || partner.city;
+  
+  if (!area && partner.pincode) {
+    area = getAreaFromPincode(partner.pincode);
+  }
+  
   const pincode = partner.pincode || 'Unknown';
   
-  return `${area}, ${pincode}`;
+  return `${area || 'Unknown Area'}, ${pincode}`;
 };
 
 /**
- * Get area name from pincode (basic mapping)
+ * Get area name from pincode using API call
+ * @param {string} pincode - Pincode
+ * @returns {Promise<string>} - Area name from database
+ */
+export const getAreaFromPincodeAPI = async (pincode) => {
+  if (!pincode) return 'Unknown Area';
+  
+  try {
+    // Call the location API to get real area data (same as landing page)
+    const response = await fetch(`http://localhost:8080/api/locations/pincode/${pincode}`);
+    if (response.ok) {
+      const locationData = await response.json();
+      return locationData.areaName || locationData.city || 'Unknown Area';
+    }
+  } catch (error) {
+    console.error('Error fetching location data:', error);
+  }
+  
+  // Fallback to basic mapping
+  return getAreaFromPincode(pincode);
+};
+
+/**
+ * Get area name from pincode (synchronous with fallback mapping)
  * @param {string} pincode - Pincode
  * @returns {string} - Area name
  */
 export const getAreaFromPincode = (pincode) => {
-  // Basic pincode to area mapping for common areas
+  if (!pincode) return 'Unknown Area';
+  
+  // Basic mapping for common areas - will be enhanced with API later
   const pincodeMap = {
     '400001': 'Fort, Mumbai',
     '400002': 'Kalbadevi, Mumbai',
@@ -53,6 +84,11 @@ export const getAreaFromPincode = (pincode) => {
     '400054': 'Santacruz West, Mumbai',
     '400055': 'Vile Parle East, Mumbai',
     '400056': 'Vile Parle West, Mumbai',
+    '441904': 'Nagpur, Maharashtra',
+    '110001': 'Connaught Place, Delhi',
+    '560001': 'Bangalore City, Karnataka',
+    '600001': 'Chennai Central, Tamil Nadu',
+    '700001': 'Kolkata Central, West Bengal',
     '400057': 'Andheri East, Mumbai',
     '400058': 'Andheri West, Mumbai',
     '400059': 'Goregaon East, Mumbai',

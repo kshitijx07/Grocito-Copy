@@ -214,6 +214,55 @@ public class DeliveryPartnerAuthController {
     }
 
     /**
+     * Change password for authenticated delivery partner
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, Object> requestData) {
+        try {
+            Long partnerId = null;
+            String currentPassword = (String) requestData.get("currentPassword");
+            String newPassword = (String) requestData.get("newPassword");
+
+            // Get partnerId from request data
+            if (requestData.get("partnerId") instanceof Integer) {
+                partnerId = ((Integer) requestData.get("partnerId")).longValue();
+            } else if (requestData.get("partnerId") instanceof Long) {
+                partnerId = (Long) requestData.get("partnerId");
+            }
+
+            if (partnerId == null || currentPassword == null || newPassword == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Partner ID, current password, and new password are required"));
+            }
+
+            logger.info("Change password request for delivery partner ID: {}", partnerId);
+
+            DeliveryPartnerAuth updatedAuth = authService.changePassword(partnerId, currentPassword, newPassword);
+
+            // Remove password from response
+            updatedAuth.setPassword(null);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Password changed successfully");
+            response.put("partner", updatedAuth);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            logger.error("Error changing password: {}", e.getMessage());
+            if (e.getMessage().contains("Invalid current password")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Invalid current password"));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected error changing password: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to change password. Please try again."));
+        }
+    }
+
+    /**
      * Debug endpoint to check token parsing
      */
     @GetMapping("/debug-token")

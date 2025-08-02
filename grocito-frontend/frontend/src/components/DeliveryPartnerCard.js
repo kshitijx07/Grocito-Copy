@@ -90,17 +90,33 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
       // Log the call attempt (you can add analytics here)
       console.log('Initiating call to delivery partner:', phoneNumber);
       
+      // Show confirmation dialog first
+      const confirmCall = window.confirm(
+        `Call your delivery partner at ${phoneNumber}?\n\nThis will open your phone's dialer.`
+      );
+      
+      if (!confirmCall) {
+        setCalling(false);
+        return;
+      }
+      
       // Create a tel: link to initiate the call
       const telLink = `tel:${phoneNumber}`;
-      window.location.href = telLink;
+      window.open(telLink, '_self');
       
       // Show success message
-      toast.success('Initiating call to your delivery partner...', {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.success(
+        <div>
+          <div className="font-bold">📞 Calling Delivery Partner</div>
+          <div className="text-sm">Connecting to {phoneNumber}</div>
+        </div>, 
+        {
+          position: "top-center",
+          autoClose: 4000,
+        }
+      );
       
-      // Optional: Track call in backend
+      // Track call in backend
       try {
         await fetch(`http://localhost:8080/api/order-assignments/${orderId}/call-log`, {
           method: 'POST',
@@ -109,9 +125,11 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
           },
           body: JSON.stringify({
             phoneNumber: phoneNumber,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            orderId: orderId
           })
         });
+        console.log('Call logged successfully');
       } catch (logError) {
         console.log('Call logging failed (non-critical):', logError);
       }
@@ -177,15 +195,32 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 border border-blue-200 shadow-xl">
         <div className="animate-pulse">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gray-300 rounded-full"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-300 rounded w-1/3"></div>
+          <div className="flex items-center space-x-6">
+            <div className="relative">
+              <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl"></div>
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gray-200 rounded-full"></div>
+            </div>
+            <div className="flex-1 space-y-4">
+              <div className="space-y-2">
+                <div className="h-6 bg-gray-300 rounded-lg w-2/3"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-16 bg-gray-200 rounded-xl"></div>
+                <div className="h-16 bg-gray-200 rounded-xl"></div>
+              </div>
+              <div className="flex space-x-3">
+                <div className="h-12 bg-gray-200 rounded-xl w-24"></div>
+                <div className="h-12 bg-gray-200 rounded-xl w-20"></div>
+                <div className="h-12 bg-gray-200 rounded-xl w-20"></div>
+              </div>
             </div>
           </div>
+        </div>
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-500 font-medium">Loading delivery partner information...</p>
         </div>
       </div>
     );
@@ -193,22 +228,75 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
 
   if (!partnerInfo) {
     // Show when no delivery partner is assigned yet
-    if (orderStatus === 'PLACED' || orderStatus === 'CONFIRMED') {
+    if (orderStatus === 'PLACED' || orderStatus === 'CONFIRMED' || orderStatus === 'PREPARING') {
       return (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
-              <ClockIcon className="w-8 h-8 text-white" />
+        <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-amber-50 rounded-2xl p-6 border border-yellow-200 shadow-xl">
+          <div className="flex items-center space-x-6">
+            <div className="relative">
+              <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl">
+                <ClockIcon className="w-10 h-10 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+              </div>
             </div>
             <div className="flex-1">
-              <h4 className="font-bold text-lg text-gray-900 mb-1">Finding Your Delivery Partner</h4>
-              <p className="text-gray-600">We're assigning the best delivery partner for your order...</p>
-              <div className="flex items-center space-x-2 mt-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <span className="text-sm text-gray-500 ml-2">This usually takes 2-3 minutes</span>
+              <h4 className="font-bold text-xl text-gray-900 mb-2 flex items-center space-x-2">
+                <span>🔍 Finding Your Delivery Partner</span>
+              </h4>
+              <p className="text-gray-700 mb-4 font-medium">
+                We're matching you with the best available delivery partner in your area...
+              </p>
+              
+              {/* Enhanced Loading Animation */}
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce shadow-sm"></div>
+                  <div className="w-3 h-3 bg-orange-500 rounded-full animate-bounce shadow-sm" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce shadow-sm" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <span className="text-sm text-gray-600 font-medium">Searching nearby partners...</span>
               </div>
+
+              {/* Progress Steps */}
+              <div className="bg-white rounded-xl p-4 border shadow-sm">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-gray-700">✅ Order placed</span>
+                  </div>
+                  {orderStatus === 'CONFIRMED' || orderStatus === 'PREPARING' ? (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700">✅ Order confirmed</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-gray-700">🔄 Confirming order...</span>
+                    </div>
+                  )}
+                  {orderStatus === 'PREPARING' ? (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-gray-700">👨‍🍳 Preparing your order...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-gray-700">🔄 Finding delivery partner...</span>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                    <span className="text-sm text-gray-500">⏳ Partner assignment</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-3 bg-yellow-100 rounded-lg px-3 py-2 border border-yellow-200">
+                ⏱️ This usually takes 2-3 minutes. We'll notify you once a partner is assigned!
+              </p>
             </div>
           </div>
         </div>
@@ -218,41 +306,44 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="font-bold text-lg text-gray-900 flex items-center space-x-2">
-          <TruckIcon className="w-6 h-6 text-blue-600" />
+    <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 border border-blue-200 shadow-xl hover:shadow-2xl transition-all duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h4 className="font-bold text-xl text-gray-900 flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <TruckIcon className="w-5 h-5 text-white" />
+          </div>
           <span>Your Delivery Partner</span>
         </h4>
-        <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(partnerInfo.status)}`}>
+        <span className={`px-4 py-2 rounded-xl text-sm font-bold border-2 shadow-sm ${getStatusColor(partnerInfo.status)}`}>
           {formatStatus(partnerInfo.status)}
         </span>
       </div>
 
-      <div className="flex items-start space-x-4">
+      <div className="flex items-start space-x-6">
         {/* Partner Avatar */}
         <div className="relative">
           {partnerInfo.profileImage ? (
             <img
               src={partnerInfo.profileImage}
               alt={partnerInfo.name}
-              className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg"
+              className="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-xl"
             />
           ) : (
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center border-3 border-white shadow-lg">
-              <UserIcon className="w-8 h-8 text-white" />
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-4 border-white shadow-xl">
+              <UserIcon className="w-10 h-10 text-white" />
             </div>
           )}
-          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full border-3 border-white flex items-center justify-center shadow-lg">
             {getStatusIcon(partnerInfo.status)}
           </div>
         </div>
 
         {/* Partner Details */}
         <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <h5 className="font-bold text-xl text-gray-900">{partnerInfo.name}</h5>
-            <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-4 mb-3">
+            <h5 className="font-bold text-2xl text-gray-900">{partnerInfo.name}</h5>
+            <div className="flex items-center space-x-1 bg-white rounded-lg px-3 py-1 border shadow-sm">
               {[...Array(5)].map((_, i) => (
                 <StarIconSolid
                   key={i}
@@ -261,92 +352,147 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
                   }`}
                 />
               ))}
-              <span className="text-sm font-medium text-gray-600 ml-1">
-                {partnerInfo.rating} ({partnerInfo.totalDeliveries}+ deliveries)
+              <span className="text-sm font-bold text-gray-700 ml-2">
+                {partnerInfo.rating}
               </span>
             </div>
           </div>
 
-          {/* Vehicle Info */}
-          <div className="flex items-center space-x-4 mb-3">
-            <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-1 border">
-              <TruckIcon className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">{partnerInfo.vehicleType}</span>
-              {partnerInfo.vehicleNumber && (
-                <span className="text-sm text-gray-500">• {partnerInfo.vehicleNumber}</span>
-              )}
+          <p className="text-sm text-gray-600 mb-4 font-medium">
+            🏆 {partnerInfo.totalDeliveries}+ successful deliveries
+          </p>
+
+          {/* Vehicle & ETA Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <div className="flex items-center space-x-3 bg-white rounded-xl px-4 py-3 border shadow-sm">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                <TruckIcon className="w-4 h-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Vehicle</p>
+                <p className="text-sm font-bold text-gray-900">
+                  {partnerInfo.vehicleType}
+                  {partnerInfo.vehicleNumber && (
+                    <span className="text-gray-600"> • {partnerInfo.vehicleNumber}</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 bg-white rounded-lg px-3 py-1 border">
-              <ClockIcon className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">ETA: {partnerInfo.estimatedTime}</span>
+            
+            <div className="flex items-center space-x-3 bg-white rounded-xl px-4 py-3 border shadow-sm">
+              <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center">
+                <ClockIcon className="w-4 h-4 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Estimated Time</p>
+                <p className="text-sm font-bold text-gray-900">{partnerInfo.estimatedTime}</p>
+              </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-3">
             {partnerInfo.phone && (
               <button
                 onClick={() => handleCall(partnerInfo.phone)}
                 disabled={calling}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg ${
                   calling
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                    : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white hover:shadow-xl transform hover:scale-105 active:scale-95'
                 }`}
               >
                 {calling ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     <span>Calling...</span>
                   </>
                 ) : (
                   <>
-                    <PhoneIconSolid className="w-4 h-4" />
-                    <span>Call Partner</span>
+                    <PhoneIconSolid className="w-5 h-5" />
+                    <span>Call Now</span>
                   </>
                 )}
               </button>
             )}
             
             <button
-              onClick={() => toast.info('Chat feature coming soon!')}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              onClick={() => toast.info(
+                <div>
+                  <div className="font-bold">💬 Chat Feature</div>
+                  <div className="text-sm">Coming soon! You'll be able to chat with your delivery partner.</div>
+                </div>
+              )}
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
             >
-              <ChatBubbleLeftRightIcon className="w-4 h-4" />
+              <ChatBubbleLeftRightIcon className="w-5 h-5" />
               <span>Chat</span>
             </button>
             
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all duration-200"
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
             >
-              <MapPinIcon className="w-4 h-4" />
+              <MapPinIcon className="w-5 h-5" />
               <span>Track</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Timeline */}
+      {/* Enhanced Timeline */}
       {partnerInfo.status !== 'ASSIGNED' && (
-        <div className="mt-6 pt-4 border-t border-blue-200">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Assigned: {new Date(partnerInfo.assignedAt).toLocaleTimeString()}</span>
+        <div className="mt-6 pt-6 border-t border-blue-200">
+          <h6 className="font-bold text-gray-900 mb-4 flex items-center space-x-2">
+            <ClockIcon className="w-4 h-4" />
+            <span>Delivery Timeline</span>
+          </h6>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+              <div className="flex-1 bg-white rounded-lg px-3 py-2 border shadow-sm">
+                <p className="text-sm font-medium text-gray-900">Order Assigned</p>
+                <p className="text-xs text-gray-600">{new Date(partnerInfo.assignedAt).toLocaleString()}</p>
+              </div>
             </div>
+            
             {partnerInfo.acceptedAt && (
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span>Accepted: {new Date(partnerInfo.acceptedAt).toLocaleTimeString()}</span>
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full shadow-sm"></div>
+                <div className="flex-1 bg-white rounded-lg px-3 py-2 border shadow-sm">
+                  <p className="text-sm font-medium text-gray-900">Order Accepted</p>
+                  <p className="text-xs text-gray-600">{new Date(partnerInfo.acceptedAt).toLocaleString()}</p>
+                </div>
               </div>
             )}
+            
             {partnerInfo.pickupTime && (
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span>Picked up: {new Date(partnerInfo.pickupTime).toLocaleTimeString()}</span>
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-3 bg-purple-500 rounded-full shadow-sm"></div>
+                <div className="flex-1 bg-white rounded-lg px-3 py-2 border shadow-sm">
+                  <p className="text-sm font-medium text-gray-900">Order Picked Up</p>
+                  <p className="text-xs text-gray-600">{new Date(partnerInfo.pickupTime).toLocaleString()}</p>
+                </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Contact Info */}
+      {partnerInfo.phone && (
+        <div className="mt-6 pt-6 border-t border-blue-200">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <PhoneIconSolid className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-800">Direct Contact</p>
+                <p className="text-lg font-bold text-green-900">{partnerInfo.phone}</p>
+                <p className="text-xs text-green-600">Tap "Call Now" to connect instantly</p>
+              </div>
+            </div>
           </div>
         </div>
       )}

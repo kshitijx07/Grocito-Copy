@@ -8,6 +8,7 @@ import AvailabilityToggle from "../../components/common/AvailabilityToggle";
 
 import dashboardAPI from "../../services/dashboardAPI";
 import ordersAPI from "../../services/ordersAPI";
+import { calculateDailyEarnings, calculateTotalEarnings, formatCurrency } from "../../utils/earningsCalculator";
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -22,45 +23,82 @@ const Dashboard = () => {
   // Load dashboard data
   const loadDashboardData = async () => {
     try {
-      const data = await dashboardAPI.getDashboard();
-      setDashboardData(data);
-      setIsAvailable(data.isAvailable || false);
-      setActiveOrders(data.activeOrders || []);
-      setAvailableOrders(data.availableOrders || []);
-      setStats(data.stats || {});
-      setCompletedDeliveries(data.completedDeliveries || []);
+      // Get real data from multiple sources like Orders page does
+      const [dashboardData, activeOrdersData, availableOrdersData, myOrders, completedOrdersData] = await Promise.all([
+        dashboardAPI.getDashboard().catch(() => null),
+        ordersAPI.getMyOrders().catch(() => []),
+        ordersAPI.getAvailableOrders().catch(() => []),
+        ordersAPI.getMyOrders().catch(() => []),
+        ordersAPI.getCompletedOrders().catch(() => [])
+      ]);
+
+      // Combine all orders and filter delivered ones
+      const allOrders = [...myOrders, ...completedOrdersData];
+      const deliveredOrders = allOrders.filter(order => order.status === 'DELIVERED');
+
+      // Set dashboard data
+      if (dashboardData) {
+        setDashboardData(dashboardData);
+        setIsAvailable(dashboardData.isAvailable || false);
+      } else {
+        setIsAvailable(false);
+      }
+
+      setActiveOrders(activeOrdersData);
+      setAvailableOrders(availableOrdersData);
+      setCompletedDeliveries(deliveredOrders);
+
+      // Calculate real stats using unified earnings calculator
+      console.log('Dashboard Debug:', {
+        totalDeliveredOrders: deliveredOrders.length,
+        activeOrders: activeOrdersData.length,
+        sampleOrder: deliveredOrders[0]
+      });
+
+      // Use unified calculator for consistent results
+      const dailyEarnings = calculateDailyEarnings(deliveredOrders);
+      const totalEarnings = calculateTotalEarnings(deliveredOrders);
+
+      const calculatedStats = {
+        todayDeliveries: dailyEarnings.totalDeliveries,
+        activeOrders: activeOrdersData.length,
+        completedDeliveries: deliveredOrders.length,
+        todayEarnings: dailyEarnings.totalEarnings,
+        totalEarnings: totalEarnings.totalEarnings,
+        avgEarningsPerDelivery: totalEarnings.averageEarningsPerDelivery,
+        dailyTargetAchieved: dailyEarnings.dailyTargetAchieved,
+        deliveriesNeededForTarget: dailyEarnings.deliveriesNeededForTarget
+      };
+
+      console.log('Dashboard Calculated Stats:', calculatedStats);
+      setStats(calculatedStats);
+
     } catch (error) {
       console.error("Error loading dashboard:", error);
 
-      // Fallback to mock data for development
-      const mockData = {
+      // Fallback to empty data
+      setDashboardData({
         partner: {
           id: 1,
           fullName: "Demo Partner",
           pincode: "441904",
           verificationStatus: "VERIFIED",
         },
-        isAvailable: false,
-        activeOrders: [],
-        availableOrders: [],
-        stats: {
-          todayDeliveries: 0,
-          activeOrders: 0,
-          completedDeliveries: 0,
-          todayEarnings: 0,
-          totalEarnings: 0,
-        },
-        completedDeliveries: [],
-      };
+        isAvailable: false
+      });
+      setIsAvailable(false);
+      setActiveOrders([]);
+      setAvailableOrders([]);
+      setStats({
+        todayDeliveries: 0,
+        activeOrders: 0,
+        completedDeliveries: 0,
+        todayEarnings: 0,
+        totalEarnings: 0,
+      });
+      setCompletedDeliveries([]);
 
-      setDashboardData(mockData);
-      setIsAvailable(mockData.isAvailable);
-      setActiveOrders(mockData.activeOrders);
-      setAvailableOrders(mockData.availableOrders);
-      setStats(mockData.stats);
-      setCompletedDeliveries(mockData.completedDeliveries);
-
-      toast.warn("Using demo data - Backend API not available");
+      toast.warn("Unable to load dashboard data - Please check your connection");
     } finally {
       setLoading(false);
     }
@@ -126,17 +164,21 @@ const Dashboard = () => {
       };
 
       toast.success(statusMessages[newStatus] || "Order status updated");
+      
+      // Force refresh dashboard data to show updated earnings
+      setLoading(true);
       await loadDashboardData();
     } catch (error) {
       console.error("Error updating order status:", error);
       const errorMessage = error.response?.data?.error || error.message || "Unknown error";
 
       if (errorMessage.includes("Cannot mark COD order as delivered without collecting payment")) {
-        toast.error("💰 Payment Required: Please collect payment from customer before marking as delivered");
+        toast.error("Payment Required: Please collect payment from customer before marking as delivered");
       } else {
-        toast.error(`❌ Failed to update order: ${errorMessage}`);
+        toast.error(`Failed to update order: ${errorMessage}`);
       }
 
+      // Still refresh to get latest data
       await loadDashboardData();
     }
   };
@@ -147,14 +189,8 @@ const Dashboard = () => {
 
     const interval = setInterval(async () => {
       try {
-        await dashboardAPI.heartbeat();
-        const [availableOrdersData, statsData] = await Promise.all([
-          ordersAPI.getAvailableOrders(),
-          dashboardAPI.getStats(),
-        ]);
-
-        setAvailableOrders(availableOrdersData);
-        setStats(statsData);
+        // Refresh all data including completed deliveries
+        await loadDashboardData();
       } catch (error) {
         console.error("Error in real-time update:", error);
       }
@@ -232,7 +268,7 @@ const Dashboard = () => {
             {/* Today's Earnings */}
             <div className="text-center">
               <div className="text-3xl font-bold text-green-600">
-                ₹{(stats.todayEarnings || 0).toFixed(2)}
+                {formatCurrency(stats.todayEarnings || 0)}
               </div>
               <div className="text-sm font-medium text-gray-500 mt-1">Today's Earnings</div>
               <div className="text-xs text-gray-400 mt-1">
@@ -253,23 +289,23 @@ const Dashboard = () => {
             
             {/* Daily Target */}
             <div className="text-center">
-              <div className={`text-3xl font-bold ${(stats.todayDeliveries || 0) >= 12 ? 'text-green-600' : 'text-orange-600'}`}>
+              <div className={`text-3xl font-bold ${stats.dailyTargetAchieved ? 'text-green-600' : 'text-orange-600'}`}>
                 {stats.todayDeliveries || 0}/12
               </div>
               <div className="text-sm font-medium text-gray-500 mt-1">Daily Target</div>
               <div className="text-xs text-gray-400 mt-1">
-                {(stats.todayDeliveries || 0) >= 12 ? '₹80 bonus earned!' : `${Math.max(0, 12 - (stats.todayDeliveries || 0))} more for ₹80 bonus`}
+                {stats.dailyTargetAchieved ? '₹80 bonus earned!' : `${stats.deliveriesNeededForTarget || 12} more for ₹80 bonus`}
               </div>
             </div>
             
             {/* Average Earnings */}
             <div className="text-center">
               <div className="text-3xl font-bold text-purple-600">
-                ₹{(stats.todayDeliveries > 0 ? (stats.todayEarnings / stats.todayDeliveries) : 27.5).toFixed(2)}
+                {formatCurrency(stats.avgEarningsPerDelivery || 27.5)}
               </div>
               <div className="text-sm font-medium text-gray-500 mt-1">Per Delivery Avg</div>
               <div className="text-xs text-gray-400 mt-1">
-                Based on {stats.todayDeliveries || 0} deliveries
+                Based on {stats.completedDeliveries || 0} deliveries
               </div>
             </div>
           </div>

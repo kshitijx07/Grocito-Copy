@@ -9,9 +9,260 @@ import {
   TruckIcon,
   IdentificationIcon,
   CheckBadgeIcon,
-  XMarkIcon
+  XMarkIcon,
+  EyeIcon,
+  EyeSlashIcon
 } from '@heroicons/react/24/outline';
 import { fetchDashboardStats } from '../../store/slices/dashboardSlice';
+
+// Password Change Modal Component
+const PasswordChangeModal = ({ onClose, partnerId }) => {
+  const [formData, setFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.currentPassword) {
+      newErrors.currentPassword = 'Current password is required';
+    }
+
+    if (!formData.newPassword) {
+      newErrors.newPassword = 'New password is required';
+    } else if (formData.newPassword.length < 8) {
+      newErrors.newPassword = 'Password must be at least 8 characters long';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.newPassword)) {
+      newErrors.newPassword = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your new password';
+    } else if (formData.newPassword !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (formData.currentPassword === formData.newPassword) {
+      newErrors.newPassword = 'New password must be different from current password';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/delivery-partner-auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          partnerId,
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Password changed successfully!');
+        onClose();
+      } else {
+        if (data.error === 'Invalid current password') {
+          setErrors({ currentPassword: 'Current password is incorrect' });
+        } else {
+          toast.error(data.error || 'Failed to change password');
+        }
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error('Failed to change password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Change Password</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Current Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPasswords.current ? 'text' : 'password'}
+                name="currentPassword"
+                value={formData.currentPassword}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 ${
+                  errors.currentPassword ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Enter current password"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('current')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showPasswords.current ? (
+                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <EyeIcon className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+            {errors.currentPassword && (
+              <p className="text-red-500 text-sm mt-1">{errors.currentPassword}</p>
+            )}
+          </div>
+
+          {/* New Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPasswords.new ? 'text' : 'password'}
+                name="newPassword"
+                value={formData.newPassword}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 ${
+                  errors.newPassword ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Enter new password"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('new')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showPasswords.new ? (
+                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <EyeIcon className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+            {errors.newPassword && (
+              <p className="text-red-500 text-sm mt-1">{errors.newPassword}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Password must be at least 8 characters with uppercase, lowercase, and number
+            </p>
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPasswords.confirm ? 'text' : 'password'}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10 ${
+                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Confirm new password"
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('confirm')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showPasswords.confirm ? (
+                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <EyeIcon className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? 'Changing...' : 'Change Password'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const Profile = () => {
   const dispatch = useDispatch();
@@ -294,31 +545,10 @@ const Profile = () => {
 
       {/* Password Change Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Change Password</h3>
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">Password change functionality will be available soon.</p>
-              <p className="text-sm text-gray-500">For security reasons, please contact support to change your password.</p>
-            </div>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <PasswordChangeModal 
+          onClose={() => setShowPasswordModal(false)}
+          partnerId={partner?.id}
+        />
       )}
 
       {/* Vehicle Update Modal */}

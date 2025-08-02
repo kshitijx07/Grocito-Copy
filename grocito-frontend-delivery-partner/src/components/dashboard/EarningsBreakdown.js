@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { earningsService } from "../../services/earningsService";
+import { calculateOrderEarnings, formatCurrency, getCurrentBonusStatus } from "../../utils/earningsCalculator";
 
 const EarningsBreakdown = ({ deliveries = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
@@ -28,26 +28,103 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
     // Filter deliveries based on selected period
     switch (selectedPeriod) {
       case "today":
-        filteredDeliveries = deliveries.filter(
-          (d) => d.completedAt && d.completedAt.startsWith(today)
-        );
+        filteredDeliveries = deliveries.filter((d) => {
+          const deliveryDate = d.completedAt || d.deliveredAt;
+          return deliveryDate && deliveryDate.startsWith(today);
+        });
         break;
       case "week":
-        const weekStart = earningsService.getWeekStart();
-        filteredDeliveries = deliveries.filter(
-          (d) => d.completedAt && d.completedAt >= weekStart
-        );
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekStartISO = weekStart.toISOString().split('T')[0];
+        filteredDeliveries = deliveries.filter((d) => {
+          const deliveryDate = d.completedAt || d.deliveredAt;
+          return deliveryDate && deliveryDate >= weekStartISO;
+        });
         break;
       case "month":
         const monthStart = new Date().toISOString().slice(0, 7); // YYYY-MM
-        filteredDeliveries = deliveries.filter(
-          (d) => d.completedAt && d.completedAt.startsWith(monthStart)
-        );
+        filteredDeliveries = deliveries.filter((d) => {
+          const deliveryDate = d.completedAt || d.deliveredAt;
+          return deliveryDate && deliveryDate.startsWith(monthStart);
+        });
         break;
     }
 
-    const earnings = earningsService.calculateDailyEarnings(filteredDeliveries);
-    setEarningsData(earnings);
+    // Calculate earnings from real delivery data
+    let totalEarnings = 0;
+    let totalDeliveries = filteredDeliveries.length;
+    let freeDeliveries = 0;
+    let paidDeliveries = 0;
+    let totalBonuses = 0;
+    let totalBaseEarnings = 0;
+    let peakHourDeliveries = 0;
+    let weekendDeliveries = 0;
+
+    const earningsBreakdown = filteredDeliveries.map(delivery => {
+      // Use unified calculator for consistent results
+      const earnings = calculateOrderEarnings(delivery);
+      
+      totalEarnings += earnings.totalEarnings;
+      totalBonuses += earnings.totalBonuses || 0;
+      totalBaseEarnings += earnings.baseEarnings;
+      
+      if (earnings.deliveryType === 'FREE_DELIVERY') {
+        freeDeliveries++;
+      } else {
+        paidDeliveries++;
+      }
+
+      // Count bonus deliveries
+      if (earnings.bonuses.peakHour) {
+        peakHourDeliveries++;
+      }
+      if (earnings.bonuses.weekend) {
+        weekendDeliveries++;
+      }
+
+      return {
+        orderId: delivery.id,
+        orderAmount: earnings.orderAmount,
+        deliveryType: earnings.deliveryType,
+        baseEarnings: earnings.baseEarnings,
+        totalBonuses: earnings.totalBonuses,
+        totalEarnings: earnings.totalEarnings,
+        bonusBreakdown: earnings.bonusBreakdown
+      };
+    });
+
+    // Check for daily target bonus (12+ deliveries = ₹80 bonus) - ONLY FOR TODAY
+    const dailyTargetBonus = (selectedPeriod === 'today' && totalDeliveries >= 12) ? 80 : 0;
+    const dailyTargetAchieved = (selectedPeriod === 'today' && totalDeliveries >= 12);
+    
+    // Add daily target bonus to total earnings
+    const finalTotalEarnings = totalEarnings + dailyTargetBonus;
+
+    const calculatedEarnings = {
+      date: new Date().toISOString().split('T')[0],
+      totalDeliveries,
+      freeDeliveries,
+      paidDeliveries,
+      peakHourDeliveries,
+      weekendDeliveries,
+      totalEarnings: parseFloat(finalTotalEarnings.toFixed(2)),
+      totalBaseEarnings: parseFloat(totalBaseEarnings.toFixed(2)),
+      totalBonuses: parseFloat((totalBonuses + dailyTargetBonus).toFixed(2)),
+      dailyTargetBonus,
+      dailyTargetAchieved,
+      deliveriesNeededForTarget: Math.max(0, 12 - totalDeliveries),
+      averageEarningsPerDelivery: totalDeliveries > 0 ? parseFloat((finalTotalEarnings / totalDeliveries).toFixed(2)) : 0,
+      earningsBreakdown,
+      bonusBreakdown: {
+        peakHour: 0,
+        weekend: 0,
+        dailyTarget: dailyTargetBonus
+      }
+    };
+
+    setEarningsData(calculatedEarnings);
   };
 
   const periods = [
@@ -101,7 +178,7 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-green-50 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-green-600">
-              {earningsService.formatEarnings(earningsData.totalEarnings)}
+              {formatCurrency(earningsData.totalEarnings)}
             </div>
             <div className="text-sm text-gray-600">Total Earnings</div>
             {earningsData.dailyTargetAchieved && (
@@ -114,7 +191,7 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
               {earningsData.totalDeliveries}
             </div>
             <div className="text-sm text-gray-600">Total Deliveries</div>
-            {!earningsData.dailyTargetAchieved && earningsData.deliveriesNeededForTarget > 0 && (
+            {!earningsData.dailyTargetAchieved && earningsData.deliveriesNeededForTarget > 0 && selectedPeriod === 'today' && (
               <div className="text-xs text-blue-500 mt-1">
                 {earningsData.deliveriesNeededForTarget} more for ₹80 bonus
               </div>
@@ -123,19 +200,17 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
 
           <div className="bg-purple-50 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-purple-600">
-              {earningsService.formatEarnings(earningsData.totalBonuses)}
+              {formatCurrency(earningsData.totalBonuses)}
             </div>
             <div className="text-sm text-gray-600">Total Bonuses</div>
-            {earningsData.dailyTargetBonus > 0 && (
+            {earningsData.dailyTargetBonus > 0 && selectedPeriod === 'today' && (
               <div className="text-xs text-purple-500 mt-1">Includes ₹80 daily bonus</div>
             )}
           </div>
 
           <div className="bg-orange-50 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-orange-600">
-              {earningsService.formatEarnings(
-                earningsData.averageEarningsPerDelivery
-              )}
+              {formatCurrency(earningsData.averageEarningsPerDelivery)}
             </div>
             <div className="text-sm text-gray-600">Avg per Delivery</div>
           </div>
@@ -240,7 +315,7 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Base Earnings</span>
                 <span className="font-semibold">
-                  {earningsService.formatEarnings(earningsData.totalBaseEarnings)}
+                  {formatCurrency(earningsData.totalBaseEarnings)}
                 </span>
               </div>
               
@@ -248,7 +323,7 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600">Peak Hour Bonus</span>
                   <span className="font-semibold text-orange-600">
-                    +{earningsService.formatEarnings(earningsData.bonusBreakdown.peakHour)}
+                    +{formatCurrency(earningsData.bonusBreakdown.peakHour)}
                   </span>
                 </div>
               )}
@@ -257,16 +332,16 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-purple-600">Weekend Bonus</span>
                   <span className="font-semibold text-purple-600">
-                    +{earningsService.formatEarnings(earningsData.bonusBreakdown.weekend)}
+                    +{formatCurrency(earningsData.bonusBreakdown.weekend)}
                   </span>
                 </div>
               )}
               
-              {earningsData.dailyTargetBonus > 0 && (
+              {earningsData.dailyTargetBonus > 0 && selectedPeriod === 'today' && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-blue-600">Daily Target Bonus</span>
                   <span className="font-semibold text-blue-600">
-                    +{earningsService.formatEarnings(earningsData.dailyTargetBonus)}
+                    +{formatCurrency(earningsData.dailyTargetBonus)}
                   </span>
                 </div>
               )}
@@ -275,7 +350,7 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-semibold text-gray-900">Total Earnings</span>
                   <span className="font-bold text-green-600">
-                    {earningsService.formatEarnings(earningsData.totalEarnings)}
+                    {formatCurrency(earningsData.totalEarnings)}
                   </span>
                 </div>
               </div>
@@ -315,7 +390,7 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
                             {delivery.deliveryType === "FREE_DELIVERY"
                               ? "Free Delivery"
                               : "Paid Delivery"}{" "}
-                            • {earningsService.formatEarnings(delivery.orderAmount)}
+                            • {formatCurrency(delivery.orderAmount)}
                           </div>
                           {delivery.bonusBreakdown && delivery.bonusBreakdown !== 'No bonuses' && (
                             <div className="text-xs text-orange-600 mt-1">
@@ -326,7 +401,7 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
                       </div>
                       <div className="text-right">
                         <div className="font-semibold text-green-600">
-                          {earningsService.formatEarnings(delivery.totalEarnings)}
+                          {formatCurrency(delivery.totalEarnings)}
                         </div>
                         <div className="text-xs text-gray-500">
                           Base: ₹{delivery.baseEarnings}
@@ -340,6 +415,38 @@ const EarningsBreakdown = ({ deliveries = [] }) => {
               </div>
             </div>
           )}
+
+        {/* Current Bonus Status */}
+        <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+          <h4 className="font-semibold text-green-900 mb-3">
+            Current Bonus Status
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`p-3 rounded-lg ${getCurrentBonusStatus().isPeakHour ? 'bg-orange-100 border border-orange-300' : 'bg-gray-100'}`}>
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${getCurrentBonusStatus().isPeakHour ? 'bg-orange-500' : 'bg-gray-400'}`}></div>
+                <span className={`font-medium ${getCurrentBonusStatus().isPeakHour ? 'text-orange-800' : 'text-gray-600'}`}>
+                  Peak Hours (7-10 AM, 6-9 PM)
+                </span>
+              </div>
+              <div className={`text-sm mt-1 ${getCurrentBonusStatus().isPeakHour ? 'text-orange-700' : 'text-gray-500'}`}>
+                {getCurrentBonusStatus().isPeakHour ? '+₹5 per delivery ACTIVE' : 'Not active now'}
+              </div>
+            </div>
+            
+            <div className={`p-3 rounded-lg ${getCurrentBonusStatus().isWeekend ? 'bg-purple-100 border border-purple-300' : 'bg-gray-100'}`}>
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${getCurrentBonusStatus().isWeekend ? 'bg-purple-500' : 'bg-gray-400'}`}></div>
+                <span className={`font-medium ${getCurrentBonusStatus().isWeekend ? 'text-purple-800' : 'text-gray-600'}`}>
+                  Weekend Bonus (Sat & Sun)
+                </span>
+              </div>
+              <div className={`text-sm mt-1 ${getCurrentBonusStatus().isWeekend ? 'text-purple-700' : 'text-gray-500'}`}>
+                {getCurrentBonusStatus().isWeekend ? '+₹3 per delivery ACTIVE' : 'Not active now'}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Policy Information */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">

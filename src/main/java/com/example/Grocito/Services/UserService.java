@@ -147,16 +147,57 @@ public class UserService {
     
     // Change password
     public User changePassword(Long userId, String oldPassword, String newPassword) {
+        logger.info("Changing password for user ID: {}", userId);
+        
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                .orElseThrow(() -> {
+                    logger.error("Password change failed: User not found with ID: {}", userId);
+                    return new RuntimeException("User not found with id: " + userId);
+                });
         
         // Verify old password
         if (!user.getPassword().equals(oldPassword)) {
-            throw new RuntimeException("Incorrect password");
+            logger.warn("Password change failed: Incorrect current password for user: {}", user.getEmail());
+            throw new RuntimeException("Current password is incorrect");
+        }
+        
+        if (oldPassword.equals(newPassword)) {
+            logger.warn("Password change failed: New password same as current for user: {}", user.getEmail());
+            throw new RuntimeException("New password must be different from current password");
+        }
+        
+        if (newPassword.length() < 6) {
+            logger.warn("Password change failed: New password too short for user: {}", user.getEmail());
+            throw new RuntimeException("New password must be at least 6 characters long");
         }
         
         user.setPassword(newPassword);
-        return userRepo.save(user);
+        User updatedUser = userRepo.save(user);
+        
+        logger.info("Password changed successfully for user: {}", user.getEmail());
+        return updatedUser;
+    }
+    
+    // Update password directly (for admin profile updates)
+    public User updatePassword(Long userId, String newPassword) {
+        logger.info("Updating password directly for user ID: {}", userId);
+        
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> {
+                    logger.error("Password update failed: User not found with ID: {}", userId);
+                    return new RuntimeException("User not found with id: " + userId);
+                });
+        
+        if (newPassword == null || newPassword.length() < 6) {
+            logger.warn("Password update failed: Invalid password for user: {}", user.getEmail());
+            throw new RuntimeException("Password must be at least 6 characters long");
+        }
+        
+        user.setPassword(newPassword);
+        User updatedUser = userRepo.save(user);
+        
+        logger.info("Password updated successfully for user: {}", user.getEmail());
+        return updatedUser;
     }
     
     // Update user role (admin function)

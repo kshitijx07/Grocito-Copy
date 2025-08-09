@@ -27,18 +27,7 @@ const DeliveryPartnerList = ({
     }
   };
 
-  const getAvailabilityColor = (status) => {
-    switch (status) {
-      case 'ONLINE':
-        return 'bg-green-100 text-green-800';
-      case 'BUSY':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'OFFLINE':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Removed getAvailabilityColor function as availability controls are no longer needed
 
   const handleSearch = (e) => {
     const term = e.target.value;
@@ -51,28 +40,7 @@ const DeliveryPartnerList = ({
     }, 500);
   };
 
-  const handleAvailabilityChange = async (partner, newStatus) => {
-    let isAvailable, availabilityStatus;
-    
-    switch (newStatus) {
-      case 'ONLINE':
-        isAvailable = true;
-        availabilityStatus = 'ONLINE';
-        break;
-      case 'OFFLINE':
-        isAvailable = false;
-        availabilityStatus = 'OFFLINE';
-        break;
-      case 'BUSY':
-        isAvailable = false;
-        availabilityStatus = 'BUSY';
-        break;
-      default:
-        return;
-    }
-
-    await onAvailabilityUpdate(partner.id, isAvailable, availabilityStatus);
-  };
+  // Removed handleAvailabilityChange function as availability controls are no longer needed
 
   const filteredPartners = partners.filter(partner => {
     if (statusFilter === 'all') return true;
@@ -148,11 +116,6 @@ const DeliveryPartnerList = ({
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(partner.verificationStatus)}`}>
                             {partner.verificationStatus || 'PENDING'}
                           </span>
-                          {partner.availabilityStatus && (
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getAvailabilityColor(partner.availabilityStatus)}`}>
-                              {partner.availabilityStatus.toLowerCase()}
-                            </span>
-                          )}
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
@@ -166,8 +129,17 @@ const DeliveryPartnerList = ({
                             <p><span className="font-medium">License:</span> {partner.licenseNumber || 'N/A'}</p>
                           </div>
                           <div>
-                            <p><span className="font-medium">Deliveries:</span> {partner.totalDeliveries || 0}</p>
-                            <p><span className="font-medium">Rating:</span> {(partner.averageRating || 0).toFixed(1)} ⭐</p>
+                            {partner.verificationStatus === 'VERIFIED' ? (
+                              <>
+                                <p><span className="font-medium">Successful Deliveries:</span> {partner.successfulDeliveries || 0}</p>
+                                <p><span className="font-medium">Total Earnings:</span> ₹{(partner.totalEarnings || 0).toFixed(0)}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p><span className="font-medium">Status:</span> {partner.verificationStatus === 'PENDING' ? 'Pending Verification' : 'Verification Rejected'}</p>
+                                <p><span className="font-medium">Deliveries:</span> Not Available</p>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -175,45 +147,6 @@ const DeliveryPartnerList = ({
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    {/* Availability Controls */}
-                    {partner.verificationStatus === 'VERIFIED' && (
-                      <div className="flex space-x-1">
-                        <button
-                          onClick={() => handleAvailabilityChange(partner, 'ONLINE')}
-                          disabled={partner.availabilityStatus === 'ONLINE'}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                            partner.availabilityStatus === 'ONLINE'
-                              ? 'bg-green-100 text-green-800 cursor-not-allowed'
-                              : 'bg-white text-green-700 border border-green-300 hover:bg-green-50'
-                          }`}
-                        >
-                          Online
-                        </button>
-                        <button
-                          onClick={() => handleAvailabilityChange(partner, 'BUSY')}
-                          disabled={partner.availabilityStatus === 'BUSY'}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                            partner.availabilityStatus === 'BUSY'
-                              ? 'bg-yellow-100 text-yellow-800 cursor-not-allowed'
-                              : 'bg-white text-yellow-700 border border-yellow-300 hover:bg-yellow-50'
-                          }`}
-                        >
-                          Busy
-                        </button>
-                        <button
-                          onClick={() => handleAvailabilityChange(partner, 'OFFLINE')}
-                          disabled={partner.availabilityStatus === 'OFFLINE'}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                            partner.availabilityStatus === 'OFFLINE'
-                              ? 'bg-gray-100 text-gray-800 cursor-not-allowed'
-                              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          Offline
-                        </button>
-                      </div>
-                    )}
-
                     {/* Action Buttons */}
                     <button
                       onClick={() => {
@@ -233,12 +166,11 @@ const DeliveryPartnerList = ({
                     <span>
                       Joined: {partner.createdAt ? new Date(partner.createdAt).toLocaleDateString() : 'N/A'}
                     </span>
-                    <span>
-                      Last Active: {partner.lastActiveAt ? new Date(partner.lastActiveAt).toLocaleDateString() : 'Never'}
-                    </span>
-                    <span>
-                      Earnings: ₹{(partner.totalEarnings || 0).toFixed(0)}
-                    </span>
+                    {partner.verificationStatus === 'VERIFIED' && (
+                      <span>
+                        Monthly Earnings: ₹{(partner.monthlyEarnings || 0).toFixed(0)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,7 +1,9 @@
 package com.example.Grocito.Services;
 
 import com.example.Grocito.Entity.DeliveryPartnerAuth;
+import com.example.Grocito.Entity.Order;
 import com.example.Grocito.Repository.DeliveryPartnerAuthRepository;
+import com.example.Grocito.Repository.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,8 @@ public class DeliveryPartnerAuthService {
     @Autowired
     private DeliveryPartnerAuthRepository authRepository;
     
-    // Removed DeliveryPartnerRepository since we're using auth table as main table
+    @Autowired
+    private OrderRepository orderRepository;
     
     @Autowired
     private EmailService emailService;
@@ -439,5 +442,97 @@ public class DeliveryPartnerAuthService {
         );
         
         emailService.sendSimpleMessage(auth.getEmail(), subject, message);
+    }
+    
+    /**
+     * Get delivery statistics for a partner
+     */
+    public java.util.Map<String, Object> getPartnerDeliveryStats(Long partnerId) {
+        logger.debug("Getting delivery statistics for partner: {}", partnerId);
+        
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        
+        try {
+            // Get successful deliveries count
+            long successfulDeliveries = orderRepository.countByDeliveryPartnerIdAndStatus(partnerId, "DELIVERED");
+            
+            // Get total earnings from delivered orders
+            Double totalEarnings = orderRepository.sumPartnerEarningsByDeliveryPartnerIdAndStatus(partnerId, "DELIVERED");
+            if (totalEarnings == null) totalEarnings = 0.0;
+            
+            // Get recent successful deliveries (last 5)
+            List<Order> recentDeliveries = orderRepository.findByDeliveryPartnerIdAndStatusOrderByDeliveredAtDesc(partnerId, "DELIVERED");
+            if (recentDeliveries.size() > 5) {
+                recentDeliveries = recentDeliveries.subList(0, 5);
+            }
+            
+            // Get current month earnings
+            java.time.LocalDateTime startOfMonth = java.time.LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+            Double monthlyEarnings = orderRepository.sumPartnerEarningsByDeliveryPartnerIdAndStatusAndDeliveredAtAfter(
+                partnerId, "DELIVERED", startOfMonth);
+            if (monthlyEarnings == null) monthlyEarnings = 0.0;
+            
+            stats.put("successfulDeliveries", successfulDeliveries);
+            stats.put("totalEarnings", totalEarnings);
+            stats.put("monthlyEarnings", monthlyEarnings);
+            stats.put("recentDeliveries", recentDeliveries);
+            
+            logger.debug("Partner {} stats: {} deliveries, ₹{} total earnings", 
+                partnerId, successfulDeliveries, totalEarnings);
+            
+        } catch (Exception e) {
+            logger.error("Error getting delivery statistics for partner {}: {}", partnerId, e.getMessage());
+            stats.put("successfulDeliveries", 0L);
+            stats.put("totalEarnings", 0.0);
+            stats.put("monthlyEarnings", 0.0);
+            stats.put("recentDeliveries", new java.util.ArrayList<>());
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * Get all partners with their delivery statistics
+     */
+    public List<java.util.Map<String, Object>> getAllPartnersWithStats() {
+        logger.info("Getting all partners with delivery statistics");
+        
+        List<DeliveryPartnerAuth> partners = authRepository.findAll();
+        List<java.util.Map<String, Object>> partnersWithStats = new java.util.ArrayList<>();
+        
+        for (DeliveryPartnerAuth partner : partners) {
+            java.util.Map<String, Object> partnerData = new java.util.HashMap<>();
+            
+            // Basic partner info
+            partnerData.put("id", partner.getId());
+            partnerData.put("fullName", partner.getFullName());
+            partnerData.put("email", partner.getEmail());
+            partnerData.put("phoneNumber", partner.getPhoneNumber());
+            partnerData.put("pincode", partner.getPincode());
+            partnerData.put("vehicleType", partner.getVehicleType());
+            partnerData.put("vehicleNumber", partner.getVehicleNumber());
+            partnerData.put("licenseNumber", partner.getLicenseNumber());
+            partnerData.put("verificationStatus", partner.getVerificationStatus());
+            partnerData.put("isActive", partner.getIsActive());
+            partnerData.put("createdAt", partner.getCreatedAt());
+            partnerData.put("lastLogin", partner.getLastLogin());
+            
+            // Add delivery statistics only for verified partners
+            if ("VERIFIED".equals(partner.getVerificationStatus())) {
+                java.util.Map<String, Object> stats = getPartnerDeliveryStats(partner.getId());
+                partnerData.putAll(stats);
+            } else {
+                // For non-verified partners, set default values
+                partnerData.put("successfulDeliveries", 0L);
+                partnerData.put("totalEarnings", 0.0);
+                partnerData.put("monthlyEarnings", 0.0);
+                partnerData.put("recentDeliveries", new java.util.ArrayList<>());
+            }
+            
+            partnersWithStats.add(partnerData);
+        }
+        
+        logger.info("Retrieved {} partners with statistics", partnersWithStats.size());
+        return partnersWithStats;
     }
 }

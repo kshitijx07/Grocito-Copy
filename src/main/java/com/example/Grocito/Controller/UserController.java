@@ -224,5 +224,194 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
+    
+    // Admin: Get current admin profile
+    @GetMapping("/admin/profile")
+    public ResponseEntity<?> getAdminProfile(@RequestParam String email) {
+        logger.info("Admin profile request received for email: {}", email);
+        
+        try {
+            if (email == null || email.trim().isEmpty()) {
+                logger.warn("Admin profile request without email");
+                return ResponseEntity.badRequest().body("Email parameter is required");
+            }
+            
+            User admin = userService.getUserByEmail(email.trim())
+                .orElseThrow(() -> new RuntimeException("Admin not found with email: " + email));
+            
+            // Verify admin role
+            if (!"ADMIN".equals(admin.getRole()) && !"SUPER_ADMIN".equals(admin.getRole())) {
+                logger.warn("Non-admin user attempted to access admin profile: {}", admin.getEmail());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. Admin privileges required.");
+            }
+            
+            logger.info("Admin profile retrieved for: {}", admin.getEmail());
+            return ResponseEntity.ok(admin);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving admin profile: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to retrieve profile: " + e.getMessage());
+        }
+    }
+    
+    // Admin: Update admin profile (restricted fields)
+    @PutMapping("/admin/profile")
+    public ResponseEntity<?> updateAdminProfile(
+            @RequestParam String email,
+            @RequestBody Map<String, String> profileData) {
+        logger.info("Admin profile update request received for email: {}", email);
+        
+        try {
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email parameter is required");
+            }
+            
+            User admin = userService.getUserByEmail(email.trim())
+                .orElseThrow(() -> new RuntimeException("Admin not found with email: " + email));
+            
+            // Verify admin role
+            if (!"ADMIN".equals(admin.getRole()) && !"SUPER_ADMIN".equals(admin.getRole())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. Admin privileges required.");
+            }
+            
+            // Update only allowed fields
+            boolean updated = false;
+            
+            if (profileData.containsKey("fullName") && profileData.get("fullName") != null) {
+                String fullName = profileData.get("fullName").trim();
+                if (!fullName.isEmpty() && !fullName.equals(admin.getFullName())) {
+                    admin.setFullName(fullName);
+                    updated = true;
+                    logger.debug("Updated full name for admin: {}", admin.getEmail());
+                }
+            }
+            
+            if (profileData.containsKey("contactNumber") && profileData.get("contactNumber") != null) {
+                String contactNumber = profileData.get("contactNumber").trim();
+                if (!contactNumber.equals(admin.getContactNumber())) {
+                    admin.setContactNumber(contactNumber);
+                    updated = true;
+                    logger.debug("Updated contact number for admin: {}", admin.getEmail());
+                }
+            }
+            
+            if (profileData.containsKey("address") && profileData.get("address") != null) {
+                String address = profileData.get("address").trim();
+                if (!address.equals(admin.getAddress())) {
+                    admin.setAddress(address);
+                    updated = true;
+                    logger.debug("Updated address for admin: {}", admin.getEmail());
+                }
+            }
+            
+            if (!updated) {
+                return ResponseEntity.badRequest().body("No valid fields to update");
+            }
+            
+            User updatedAdmin = userService.updateProfile(admin.getId(), admin);
+            logger.info("Admin profile updated successfully for: {}", admin.getEmail());
+            
+            return ResponseEntity.ok(updatedAdmin);
+            
+        } catch (Exception e) {
+            logger.error("Error updating admin profile: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update profile: " + e.getMessage());
+        }
+    }
+    
+    // Admin: Change password
+    @PutMapping("/admin/change-password")
+    public ResponseEntity<?> changeAdminPassword(
+            @RequestParam String email,
+            @RequestBody Map<String, String> passwordData) {
+        logger.info("Admin password change request received for email: {}", email);
+        
+        try {
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email parameter is required");
+            }
+            
+            User admin = userService.getUserByEmail(email.trim())
+                .orElseThrow(() -> new RuntimeException("Admin not found with email: " + email));
+            
+            // Verify admin role
+            if (!"ADMIN".equals(admin.getRole()) && !"SUPER_ADMIN".equals(admin.getRole())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied. Admin privileges required.");
+            }
+            
+            String currentPassword = passwordData.get("currentPassword");
+            String newPassword = passwordData.get("newPassword");
+            
+            if (currentPassword == null || currentPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Current password is required");
+            }
+            
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("New password is required");
+            }
+            
+            if (newPassword.length() < 6) {
+                return ResponseEntity.badRequest().body("New password must be at least 6 characters long");
+            }
+            
+            // Use the service method to change password with validation
+            try {
+                userService.changePassword(admin.getId(), currentPassword, newPassword);
+                logger.info("Password changed successfully for admin: {}", admin.getEmail());
+                return ResponseEntity.ok().body("Password changed successfully");
+            } catch (RuntimeException e) {
+                logger.warn("Password change failed for admin {}: {}", admin.getEmail(), e.getMessage());
+                return ResponseEntity.badRequest().body(e.getMessage());
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error changing admin password: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to change password: " + e.getMessage());
+        }
+    }
+    
+    // Helper method to extract user ID from token (improved implementation)
+    private Long extractUserIdFromToken(String token) {
+        try {
+            logger.debug("Extracting user ID from token: {}", token.substring(0, Math.min(token.length(), 20)) + "...");
+            
+            // Handle demo token format: "demo-admin-token-{userId}-{timestamp}"
+            if (token.startsWith("demo-admin-token-")) {
+                String[] parts = token.split("-");
+                if (parts.length >= 4) {
+                    Long userId = Long.parseLong(parts[3]);
+                    logger.debug("Extracted user ID from demo token: {}", userId);
+                    return userId;
+                }
+            }
+            
+            // In a real implementation, you would decode JWT token here
+            // For now, we'll also check if it's a simple user ID token
+            try {
+                Long userId = Long.parseLong(token);
+                logger.debug("Extracted user ID from simple token: {}", userId);
+                return userId;
+            } catch (NumberFormatException e) {
+                // Not a simple number token
+            }
+            
+            logger.warn("Unable to extract user ID from token format");
+            return null;
+        } catch (Exception e) {
+            logger.error("Error extracting user ID from token: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    // Helper method to get user from email (for real authentication)
+    private User getUserFromEmail(String email) {
+        try {
+            return userService.getUserByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        } catch (Exception e) {
+            logger.error("Error getting user from email: {}", e.getMessage());
+            throw new RuntimeException("Authentication failed");
+        }
+    }
 }
 

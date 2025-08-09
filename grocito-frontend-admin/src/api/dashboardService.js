@@ -1,10 +1,17 @@
 import api from './config';
 
 export const dashboardService = {
-  // Get basic dashboard stats (placeholder for future implementation)
-  getDashboardStats: async () => {
+  // Get dashboard stats based on admin role and pincode
+  getDashboardStats: async (adminId) => {
     try {
-      // For now, return static data
+      console.log('DashboardService: Fetching dashboard stats for admin ID:', adminId);
+      const response = await api.get(`/admin/dashboard/stats?adminId=${adminId}`);
+      console.log('DashboardService: Dashboard stats received:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DashboardService: Error fetching dashboard stats:', error);
+      
+      // Return fallback data if API fails
       return {
         totalUsers: 0,
         activeOrders: 0,
@@ -12,22 +19,59 @@ export const dashboardService = {
         todayRevenue: 0,
         totalRevenue: 0,
         averageOrderValue: 0,
-        recentOrdersCount: 0
+        recentOrdersCount: 0,
+        error: 'Failed to fetch real-time data'
       };
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      throw error;
     }
   },
 
-  // Get recent activity (placeholder for future implementation)
-  getRecentActivity: async (limit = 10) => {
+  // Get recent activity based on admin role and pincode
+  getRecentActivity: async (adminId, limit = 10) => {
     try {
-      // For now, return empty array
-      return [];
+      console.log('DashboardService: Fetching recent activity for admin ID:', adminId, 'with limit:', limit);
+      const response = await api.get(`/admin/dashboard/recent-activity?adminId=${adminId}&limit=${limit}`);
+      console.log('DashboardService: Recent activity received:', response.data);
+      return response.data;
     } catch (error) {
-      console.error('Error fetching recent activity:', error);
-      throw error;
+      console.error('DashboardService: Error fetching recent activity:', error);
+      
+      // Return fallback data if API fails
+      return {
+        recentOrders: [],
+        totalCount: 0,
+        error: 'Failed to fetch recent activity'
+      };
+    }
+  },
+
+  // Get comprehensive dashboard overview
+  getDashboardOverview: async (adminId) => {
+    try {
+      console.log('DashboardService: Fetching dashboard overview for admin ID:', adminId);
+      const response = await api.get(`/admin/dashboard/overview?adminId=${adminId}`);
+      console.log('DashboardService: Dashboard overview received:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DashboardService: Error fetching dashboard overview:', error);
+      
+      // Return fallback data if API fails
+      return {
+        stats: {
+          totalUsers: 0,
+          activeOrders: 0,
+          totalProducts: 0,
+          todayRevenue: 0,
+          totalRevenue: 0,
+          averageOrderValue: 0,
+          recentOrdersCount: 0
+        },
+        recentActivity: {
+          recentOrders: [],
+          totalCount: 0
+        },
+        adminInfo: null,
+        error: 'Failed to fetch dashboard data'
+      };
     }
   }
 };

@@ -467,4 +467,45 @@ public class DeliveryPartnerAuthController {
 
         return "441904"; // Default pincode restriction for development
     }
+    
+    /**
+     * Admin: Get all partners with delivery statistics
+     */
+    @GetMapping("/admin/partners-with-stats")
+    public ResponseEntity<?> getAllPartnersWithStats() {
+        try {
+            logger.info("Admin fetching all partners with delivery statistics");
+            
+            List<Map<String, Object>> partnersWithStats = authService.getAllPartnersWithStats();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("partners", partnersWithStats);
+            response.put("count", partnersWithStats.size());
+            response.put("message", "Partners with statistics retrieved successfully");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error fetching partners with statistics: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch partners with statistics: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Admin: Get delivery statistics for a specific partner
+     */
+    @GetMapping("/admin/partner/{partnerId}/stats")
+    public ResponseEntity<?> getPartnerStats(@PathVariable Long partnerId) {
+        try {
+            logger.info("Admin fetching delivery statistics for partner: {}", partnerId);
+            
+            Map<String, Object> stats = authService.getPartnerDeliveryStats(partnerId);
+            
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            logger.error("Error fetching partner statistics: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch partner statistics: " + e.getMessage()));
+        }
+    }
 }

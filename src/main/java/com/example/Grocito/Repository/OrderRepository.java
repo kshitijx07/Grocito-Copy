@@ -50,5 +50,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     
     // Method to find orders without partner earnings for migration
     List<Order> findByStatusAndPartnerEarningIsNull(String status);
+    
+    // Method to get recent successful deliveries ordered by delivery date
+    List<Order> findByDeliveryPartnerIdAndStatusOrderByDeliveredAtDesc(Long deliveryPartnerId, String status);
+    
+    // Methods for admin dashboard
+    long countByStatus(String status);
+    long countByStatusIn(List<String> statuses);
+    List<Order> findByPincodeAndStatusIn(String pincode, List<String> statuses);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT o FROM Order o WHERE o.pincode = :pincode AND o.status = :status ORDER BY o.orderTime DESC")
+    List<Order> findByPincodeAndStatusOrderByOrderTimeDesc(@org.springframework.data.repository.query.Param("pincode") String pincode, 
+                                                           @org.springframework.data.repository.query.Param("status") String status);
 }
 

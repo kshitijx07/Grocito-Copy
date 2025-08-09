@@ -169,29 +169,38 @@ public class OrderAssignmentService {
     
     /**
      * Calculate delivery fee based on order amount
+     * Policy: Free delivery for orders >= ₹199, otherwise ₹40
      */
     private double calculateDeliveryFee(double orderAmount) {
-        // Base delivery fee: ₹30
-        // Additional 2% of order amount if order > ₹500
-        double baseFee = 30.0;
-        if (orderAmount > 500) {
-            return baseFee + (orderAmount * 0.02);
+        final double FREE_DELIVERY_THRESHOLD = 199.0;
+        final double DELIVERY_FEE = 40.0;
+        
+        if (orderAmount >= FREE_DELIVERY_THRESHOLD) {
+            logger.debug("Free delivery applied for order amount: ₹{}", orderAmount);
+            return 0.0;
+        } else {
+            logger.debug("Delivery fee of ₹{} applied for order amount: ₹{}", DELIVERY_FEE, orderAmount);
+            return DELIVERY_FEE;
         }
-        return baseFee;
     }
     
     /**
      * Calculate partner earning from delivery
+     * Policy: ₹25 for free delivery orders, ₹30 for paid delivery orders
      */
     private double calculatePartnerEarning(double deliveryFee, double orderAmount) {
-        // Partner gets 80% of delivery fee + ₹10 base earning
-        double baseEarning = 10.0;
-        double feeShare = deliveryFee * 0.8;
+        final double FREE_DELIVERY_PARTNER_EARNING = 25.0;
+        final double PAID_DELIVERY_PARTNER_EARNING = 30.0;
         
-        // Bonus for large orders (>₹1000): additional ₹20
-        double bonus = orderAmount > 1000 ? 20.0 : 0.0;
-        
-        return baseEarning + feeShare + bonus;
+        if (deliveryFee == 0.0) {
+            // Free delivery - partner gets ₹25 from Grocito
+            logger.debug("Partner earning for free delivery: ₹{}", FREE_DELIVERY_PARTNER_EARNING);
+            return FREE_DELIVERY_PARTNER_EARNING;
+        } else {
+            // Paid delivery - partner gets ₹30 from ₹40 delivery fee
+            logger.debug("Partner earning for paid delivery: ₹{}", PAID_DELIVERY_PARTNER_EARNING);
+            return PAID_DELIVERY_PARTNER_EARNING;
+        }
     }
     
     /**
@@ -215,6 +224,22 @@ public class OrderAssignmentService {
     public List<Order> getCompletedOrdersForPartner(Long partnerId) {
         return orderRepository.findByDeliveryPartnerIdAndStatusIn(partnerId, 
                 List.of("DELIVERED", "CANCELLED"));
+    }
+    
+    /**
+     * Get recent successful deliveries for a delivery partner (last 4 delivered orders)
+     */
+    public List<Order> getRecentSuccessfulDeliveries(Long partnerId) {
+        logger.info("Fetching recent successful deliveries for partner: {}", partnerId);
+        
+        // Get only delivered orders, ordered by delivery date (most recent first)
+        List<Order> deliveredOrders = orderRepository.findByDeliveryPartnerIdAndStatusOrderByDeliveredAtDesc(
+                partnerId, "DELIVERED");
+        
+        // Return only the last 4 successful deliveries
+        return deliveredOrders.stream()
+                .limit(4)
+                .collect(java.util.stream.Collectors.toList());
     }
     
     /**

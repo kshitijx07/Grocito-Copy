@@ -216,6 +216,9 @@ public class EmailService {
         // Success message
         html.append("<div class='success-badge'>");
         html.append("<strong>✅ Your order has been delivered successfully!</strong><br>");
+        if (order.getDeliveryPartner() != null) {
+            html.append("Delivered by ").append(order.getDeliveryPartner().getFullName()).append(". ");
+        }
         html.append("We hope you enjoy your fresh groceries.");
         html.append("</div>");
 
@@ -245,7 +248,50 @@ public class EmailService {
         html.append("<span class='info-label'>Payment Method:</span>");
         html.append("<span class='info-value'>").append(getPaymentMethodDisplay(order)).append("</span>");
         html.append("</div>");
+        
+        // Add Transaction ID if available
+        if (order.getPaymentId() != null && !order.getPaymentId().trim().isEmpty()) {
+            html.append("<div class='info-row'>");
+            html.append("<span class='info-label'>Transaction ID:</span>");
+            html.append("<span class='info-value' style='font-family: monospace; font-size: 14px;'>").append(order.getPaymentId()).append("</span>");
+            html.append("</div>");
+        }
+        
         html.append("</div>");
+
+        // Delivery Partner Information (if available)
+        if (order.getDeliveryPartner() != null) {
+            html.append("<div class='order-info' style='margin-top: 20px;'>");
+            html.append("<h3 style='color: #374151; margin-bottom: 15px; font-size: 18px; display: flex; align-items: center;'>");
+            html.append("<span style='margin-right: 8px;'>🚚</span> Delivery Partner Details");
+            html.append("</h3>");
+            
+            html.append("<div class='info-row'>");
+            html.append("<span class='info-label'>Delivered By:</span>");
+            html.append("<span class='info-value'>").append(order.getDeliveryPartner().getFullName()).append("</span>");
+            html.append("</div>");
+            
+            html.append("<div class='info-row'>");
+            html.append("<span class='info-label'>Contact Number:</span>");
+            html.append("<span class='info-value'>").append(order.getDeliveryPartner().getPhoneNumber()).append("</span>");
+            html.append("</div>");
+            
+            if (order.getDeliveryPartner().getVehicleType() != null) {
+                html.append("<div class='info-row'>");
+                html.append("<span class='info-label'>Vehicle Type:</span>");
+                html.append("<span class='info-value'>").append(formatVehicleType(order.getDeliveryPartner().getVehicleType())).append("</span>");
+                html.append("</div>");
+            }
+            
+            if (order.getDeliveryPartner().getVehicleNumber() != null) {
+                html.append("<div class='info-row'>");
+                html.append("<span class='info-label'>Vehicle Number:</span>");
+                html.append("<span class='info-value' style='font-family: monospace; font-weight: bold;'>").append(order.getDeliveryPartner().getVehicleNumber()).append("</span>");
+                html.append("</div>");
+            }
+            
+            html.append("</div>");
+        }
 
         // Order items
         html.append("<div class='items-section'>");
@@ -275,7 +321,9 @@ public class EmailService {
         html.append("</div>");
         html.append("<div class='total-row'>");
         html.append("<span>Delivery Fee:</span>");
-        html.append("<span>₹0.00</span>");
+        // Calculate delivery fee as Total Paid - Subtotal for accuracy
+        double calculatedDeliveryFee = order.getTotalAmount() - subtotal;
+        html.append("<span>₹").append(String.format("%.2f", calculatedDeliveryFee)).append("</span>");
         html.append("</div>");
         html.append("<div class='total-row total-final'>");
         html.append("<span>Total Paid:</span>");
@@ -438,6 +486,26 @@ public class EmailService {
         html.append("</body></html>");
 
         return html.toString();
+    }
+
+    /**
+     * Format vehicle type for display
+     */
+    private String formatVehicleType(String vehicleType) {
+        if (vehicleType == null) return "Unknown";
+        
+        switch (vehicleType.toUpperCase()) {
+            case "BIKE":
+                return "Motorcycle";
+            case "SCOOTER":
+                return "Scooter";
+            case "BICYCLE":
+                return "Bicycle";
+            case "CAR":
+                return "Car";
+            default:
+                return vehicleType.substring(0, 1).toUpperCase() + vehicleType.substring(1).toLowerCase();
+        }
     }
 
     /**

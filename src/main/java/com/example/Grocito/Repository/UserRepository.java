@@ -6,4 +6,7 @@ import com.example.Grocito.Entity.User;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+    
+    // Count users by pincode for admin dashboard
+    long countByPincode(String pincode);
 }

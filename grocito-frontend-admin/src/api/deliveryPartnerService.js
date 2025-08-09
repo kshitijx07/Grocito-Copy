@@ -1,10 +1,25 @@
 import { apiRequest } from './config';
 
 export const deliveryPartnerService = {
-  // Get all delivery partner auth records
+  // Get all delivery partner auth records with statistics
   getAllAuthRecords: async (status = null) => {
-    const params = status ? `?status=${status}` : '';
-    return await apiRequest(`/delivery-partner-auth/all${params}`, 'GET');
+    try {
+      // Use the new endpoint that includes delivery statistics
+      const response = await apiRequest('/delivery-partner-auth/admin/partners-with-stats', 'GET');
+      let partners = response.partners || [];
+      
+      // Filter by status if provided
+      if (status) {
+        partners = partners.filter(p => p.verificationStatus === status);
+      }
+      
+      return partners;
+    } catch (error) {
+      console.error('Error fetching partners with stats:', error);
+      // Fallback to old endpoint
+      const params = status ? `?status=${status}` : '';
+      return await apiRequest(`/delivery-partner-auth/all${params}`, 'GET');
+    }
   },
 
   // Get pending verification requests
@@ -55,12 +70,10 @@ export const deliveryPartnerService = {
     return await apiRequest(`/delivery-partners/${id}`, 'PUT', updateData);
   },
 
-  // Update partner availability
+  // Update partner availability (deprecated - availability controls removed)
   updatePartnerAvailability: async (partnerId, isAvailable, availabilityStatus) => {
-    return await apiRequest(`/delivery-partners/${partnerId}/availability`, 'PUT', {
-      isAvailable,
-      availabilityStatus
-    });
+    console.warn('updatePartnerAvailability is deprecated - availability controls have been removed');
+    return Promise.resolve({ message: 'Availability controls have been removed' });
   },
 
   // Update verification status (for main delivery partner record)

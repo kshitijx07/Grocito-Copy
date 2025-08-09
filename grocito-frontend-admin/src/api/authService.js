@@ -37,90 +37,10 @@ export const authService = {
         throw new Error('Access denied. Admin privileges required.');
       }
       
-      // For demo purposes, if no admin user exists, create demo users based on email
-      if (!user || !user.role) {
-        console.log('AdminAuthService: Creating demo admin user');
-        
-        // Create different demo admins based on email
-        if (email === 'admin@grocito.com') {
-          // Super Admin - can access all pincodes
-          user = {
-            id: 1,
-            fullName: 'Super Admin',
-            email: email,
-            role: 'SUPER_ADMIN',
-            address: 'Head Office, Delhi',
-            pincode: null, // No pincode restriction
-            contactNumber: '9999999999'
-          };
-        } else if (email === 'admin.south@grocito.com') {
-          // South Delhi Admin - only 110001
-          user = {
-            id: 2,
-            fullName: 'South Delhi Admin',
-            email: email,
-            role: 'ADMIN',
-            address: 'South Delhi Warehouse',
-            pincode: '110001',
-            contactNumber: '9990001100'
-          };
-        } else if (email === 'admin.north@grocito.com') {
-          // North Delhi Admin - only 110002
-          user = {
-            id: 3,
-            fullName: 'North Delhi Admin',
-            email: email,
-            role: 'ADMIN',
-            address: 'North Delhi Warehouse',
-            pincode: '110002',
-            contactNumber: '9990002200'
-          };
-        } else if (email === 'admin.east@grocito.com') {
-          // East Delhi Admin - only 110003
-          user = {
-            id: 4,
-            fullName: 'East Delhi Admin',
-            email: email,
-            role: 'ADMIN',
-            address: 'East Delhi Warehouse',
-            pincode: '110003',
-            contactNumber: '9990003300'
-          };
-        } else if (email === 'admin.pune@grocito.com') {
-          // Pune Admin - only 412105
-          user = {
-            id: 5,
-            fullName: 'Pune Admin',
-            email: email,
-            role: 'ADMIN',
-            address: 'Warehouse Pune, Maharashtra',
-            pincode: '412105',
-            contactNumber: '9990412105'
-          };
-        } else if (email === 'admin.nagpur@grocito.com') {
-          // Nagpur Admin - only 441904
-          user = {
-            id: 6,
-            fullName: 'Nagpur Admin',
-            email: email,
-            role: 'ADMIN',
-            address: 'Warehouse Nagpur, Maharashtra',
-            pincode: '441904',
-            contactNumber: '9990441904'
-          };
-        } else {
-          // Default admin for other emails - uses 441904 as example
-          user = {
-            id: 7,
-            fullName: 'Demo Admin',
-            email: email,
-            role: 'ADMIN',
-            address: 'Demo Warehouse',
-            pincode: '441904', // Your example pincode
-            contactNumber: '9999999999'
-          };
-        }
-        token = 'demo-admin-token-' + user.id + '-1234567890';
+      // If no token provided, create a simple token for session management
+      if (!token) {
+        token = 'admin-session-' + user.id + '-' + Date.now();
+        console.log('AdminAuthService: Generated session token for user:', user.id);
       }
       
       if (token && user) {
@@ -137,24 +57,9 @@ export const authService = {
       console.error('AdminAuthService: Login error:', error);
       console.error('AdminAuthService: Error response:', error.response);
       
-      // For demo purposes, if backend is not available, allow demo admin login
-      if (email === 'admin@grocito.com' && password === 'admin123') {
-        console.log('AdminAuthService: Using demo admin login');
-        const demoUser = {
-          id: 1,
-          fullName: 'Super Admin',
-          email: 'admin@grocito.com',
-          role: 'SUPER_ADMIN',
-          address: 'Head Office, Delhi',
-          pincode: null,
-          contactNumber: '9999999999'
-        };
-        const demoToken = 'demo-admin-token-' + demoUser.id + '-1234567890';
-        
-        localStorage.setItem('admin_token', demoToken);
-        localStorage.setItem('admin_user', JSON.stringify(demoUser));
-        
-        return { token: demoToken, user: demoUser, message: 'Demo login successful' };
+      // For demo purposes, if backend is not available, provide helpful error message
+      if (error.request) {
+        throw new Error('Backend server is not running. Please start the server and try again.');
       }
       
       let errorMessage = 'Login failed';
@@ -204,6 +109,17 @@ export const authService = {
   isSuperAdmin: () => {
     const user = authService.getCurrentUser();
     return user?.role === 'SUPER_ADMIN';
+  },
+
+  // Update current user data
+  updateCurrentUser: (userData) => {
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) {
+      const updatedUser = { ...currentUser, ...userData };
+      localStorage.setItem('admin_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    }
+    return null;
   },
 
   // Forgot password for admin

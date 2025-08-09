@@ -329,9 +329,7 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Activity Section */}
-      <RecentActivity 
-        activities={completedDeliveries}
-      />
+      <RecentActivity />
     </div>
   );
 };

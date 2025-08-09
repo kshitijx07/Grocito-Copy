@@ -44,5 +44,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Additional methods for stock-based queries
     List<Product> findByStockLessThanEqual(int stock);
     List<Product> findByStock(int stock);
+    
+    // Count methods for admin dashboard
+    long countByPincode(String pincode);
 }
 

@@ -270,6 +270,30 @@ public class DeliveryPartnerDashboardController {
     }
 
     /**
+     * Get recent successful deliveries (last 4 delivered orders)
+     */
+    @GetMapping("/recent-deliveries")
+    public ResponseEntity<?> getRecentDeliveries(HttpServletRequest request) {
+        try {
+            Long partnerId = getPartnerIdFromToken(request);
+            if (partnerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid or missing authentication token"));
+            }
+
+            List<Order> recentDeliveries = orderAssignmentService.getRecentSuccessfulDeliveries(partnerId);
+            
+            logger.info("Found {} recent successful deliveries for partner {}", recentDeliveries.size(), partnerId);
+            
+            return ResponseEntity.ok(recentDeliveries);
+        } catch (Exception e) {
+            logger.error("Error fetching recent deliveries: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch recent deliveries: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Migrate existing orders to add earnings data
      */
     @PostMapping("/migrate-earnings")

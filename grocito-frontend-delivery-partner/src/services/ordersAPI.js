@@ -26,6 +26,11 @@ const ordersAPI = {
   // Get completed orders (delivered/cancelled)
   getCompletedOrders: async () => {
     return await apiRequest('/delivery-partner-dashboard/completed-orders', 'GET');
+  },
+
+  // Get recent successful deliveries (last 4 delivered orders)
+  getRecentDeliveries: async () => {
+    return await apiRequest('/delivery-partner-dashboard/recent-deliveries', 'GET');
   }
 };
 

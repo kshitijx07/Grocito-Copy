@@ -1,44 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  MapPinIcon, 
-  MagnifyingGlassIcon, 
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ChartBarIcon,
-  BuildingOfficeIcon,
-  GlobeAltIcon
-} from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
+import { authService } from '../api/authService';
+import api from '../api/config';
+import AdminHeader from './common/AdminHeader';
 
 const LocationManagement = () => {
   const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [statistics, setStatistics] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [statistics, setStatistics] = useState({
+    totalLocations: 0,
+    activeLocations: 0,
+    serviceableLocations: 0,
+    nonServiceableLocations: 0
+  });
+  const [currentUser, setCurrentUser] = useState(null);
   const [filters, setFilters] = useState({
-    page: 0,
-    size: 20,
-    sortBy: 'city',
-    sortDir: 'asc',
+    search: '',
     city: '',
     state: '',
-    serviceAvailable: null,
-    search: ''
+    serviceAvailable: '',
+    sortBy: 'city',
+    sortOrder: 'asc'
   });
   const [pagination, setPagination] = useState({
-    totalElements: 0,
-    totalPages: 0,
-    currentPage: 0,
-    hasNext: false,
-    hasPrevious: false
+    currentPage: 1,
+    totalPages: 1,
+    totalLocations: 0,
+    limit: 20
   });
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState('add');
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [newLocation, setNewLocation] = useState({
+  const [formData, setFormData] = useState({
     pincode: '',
     areaName: '',
     city: '',
@@ -48,102 +41,96 @@ const LocationManagement = () => {
     serviceAvailable: false
   });
 
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+  // Remove manual API_BASE_URL since we're using the configured axios instance
 
+  // Get current user info on component mount
   useEffect(() => {
-    fetchLocations();
-    fetchStatistics();
-  }, [filters]);
+    const user = authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      if (user.role !== 'SUPER_ADMIN') {
+        toast.error('Access denied. Super Admin privileges required.');
+        return;
+      }
+    }
+  }, []);
 
-  const fetchLocations = async () => {
+  // Load data when user is available
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'SUPER_ADMIN') {
+      loadLocations();
+      loadStatistics();
+    }
+  }, [currentUser, filters, pagination.currentPage]);  
+  
+  const loadLocations = async (page = pagination.currentPage) => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams();
-      Object.keys(filters).forEach(key => {
-        if (filters[key] !== null && filters[key] !== '') {
-          queryParams.append(key, filters[key]);
-        }
+      console.log('Loading locations for page:', page);
+      
+      const queryParams = new URLSearchParams({
+        page: page - 1,
+        size: pagination.limit,
+        sortBy: filters.sortBy,
+        sortDir: filters.sortOrder,
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([key, value]) => 
+            value !== '' && key !== 'sortBy' && key !== 'sortOrder'
+          )
+        )
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/locations/admin/manage?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      console.log('Query params:', queryParams.toString());
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch locations');
-      }
+      const response = await api.get(`/locations/admin/manage?${queryParams}`);
+      console.log('Locations response:', response.data);
 
-      const data = await response.json();
-      setLocations(data.content);
-      setPagination({
-        totalElements: data.totalElements,
-        totalPages: data.totalPages,
-        currentPage: data.currentPage,
-        hasNext: data.hasNext,
-        hasPrevious: data.hasPrevious
-      });
+      const data = response.data;
+      setLocations(data.content || []);
+      setPagination(prev => ({
+        ...prev,
+        currentPage: (data.currentPage || 0) + 1,
+        totalPages: data.totalPages || 1,
+        totalLocations: data.totalElements || 0
+      }));
+      
+      console.log('Loaded locations:', data.content?.length || 0);
     } catch (error) {
       console.error('Error fetching locations:', error);
-      toast.error('Failed to fetch locations');
+      toast.error(`Failed to fetch locations: ${error.response?.data?.message || error.message}`);
+      setLocations([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStatistics = async () => {
+  const loadStatistics = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/locations/admin/statistics`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const stats = await response.json();
-        setStatistics(stats);
-      }
+      console.log('Loading location statistics...');
+      const response = await api.get('/locations/admin/statistics');
+      console.log('Statistics response:', response.data);
+      
+      setStatistics(response.data);
     } catch (error) {
       console.error('Error fetching statistics:', error);
+      toast.error(`Failed to fetch statistics: ${error.response?.data?.message || error.message}`);
+      setStatistics({
+        totalLocations: 0,
+        activeLocations: 0,
+        serviceableLocations: 0,
+        nonServiceableLocations: 0
+      });
     }
-  };
-
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value,
-      page: 0 // Reset to first page when filters change
-    }));
-  };
-
-  const handlePageChange = (newPage) => {
-    setFilters(prev => ({
-      ...prev,
-      page: newPage
-    }));
-  };
-
+  };  
   const handleAddLocation = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/locations/admin/add`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newLocation)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add location');
-      }
+      console.log('Adding location:', formData);
+      const response = await api.post('/locations/admin/add', formData);
+      console.log('Add location response:', response.data);
 
       toast.success('Location added successfully');
-      setShowAddModal(false);
-      setNewLocation({
+      setShowModal(false);
+      setFormData({
         pincode: '',
         areaName: '',
         city: '',
@@ -152,37 +139,28 @@ const LocationManagement = () => {
         subDistrict: '',
         serviceAvailable: false
       });
-      fetchLocations();
-      fetchStatistics();
+      loadLocations();
+      loadStatistics();
     } catch (error) {
       console.error('Error adding location:', error);
-      toast.error('Failed to add location');
+      toast.error(`Failed to add location: ${error.response?.data?.message || error.message}`);
     }
   };
 
   const handleEditLocation = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/locations/admin/update/${selectedLocation.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(selectedLocation)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update location');
-      }
+      console.log('Updating location:', selectedLocation.id, formData);
+      const response = await api.put(`/locations/admin/update/${selectedLocation.id}`, formData);
+      console.log('Update location response:', response.data);
 
       toast.success('Location updated successfully');
-      setShowEditModal(false);
+      setShowModal(false);
       setSelectedLocation(null);
-      fetchLocations();
-      fetchStatistics();
+      loadLocations();
+      loadStatistics();
     } catch (error) {
       console.error('Error updating location:', error);
-      toast.error('Failed to update location');
+      toast.error(`Failed to update location: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -192,633 +170,586 @@ const LocationManagement = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/locations/admin/delete/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete location');
-      }
+      console.log('Deleting location:', id);
+      const response = await api.delete(`/locations/admin/delete/${id}`);
+      console.log('Delete location response:', response.data);
 
       toast.success('Location deleted successfully');
-      fetchLocations();
-      fetchStatistics();
+      loadLocations();
+      loadStatistics();
     } catch (error) {
       console.error('Error deleting location:', error);
-      toast.error('Failed to delete location');
+      toast.error(`Failed to delete location: ${error.response?.data?.message || error.message}`);
     }
-  };
-
+  }; 
   const handleToggleService = async (location) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/locations/admin/service-availability/${location.pincode}?available=${!location.serviceAvailable}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const newStatus = !location.serviceAvailable;
+      console.log('Toggling service for location:', location.pincode, 'to:', newStatus);
+      
+      const response = await api.put(`/locations/admin/service-availability/${location.pincode}?available=${newStatus}`);
+      console.log('Toggle service response:', response.data);
 
-      if (!response.ok) {
-        throw new Error('Failed to update service availability');
-      }
-
-      toast.success(`Service ${!location.serviceAvailable ? 'enabled' : 'disabled'} for ${location.areaName}`);
-      fetchLocations();
-      fetchStatistics();
+      toast.success(`Service ${newStatus ? 'enabled' : 'disabled'} for ${location.areaName}`);
+      loadLocations();
+      loadStatistics();
     } catch (error) {
       console.error('Error updating service availability:', error);
-      toast.error('Failed to update service availability');
+      toast.error(`Failed to update service availability: ${error.response?.data?.message || error.message}`);
     }
   };
 
-  const handleBulkCityAction = async (city, enable) => {
-    if (!window.confirm(`Are you sure you want to ${enable ? 'enable' : 'disable'} service for all locations in ${city}?`)) {
-      return;
-    }
+  // Safety check for super admin access
+  if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminHeader 
+          title="Location Management" 
+          subtitle="Manage service areas and availability"
+        />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h3>
+            <p className="text-gray-600">Super Admin privileges required to access Location Management.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }  return (
 
-    try {
-      const endpoint = enable ? 'bulk-enable-city' : 'bulk-disable-city';
-      const response = await fetch(`${API_BASE_URL}/api/locations/admin/${endpoint}?city=${encodeURIComponent(city)}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+    <div className="min-h-screen bg-gray-50">
+      <AdminHeader 
+        title="Location Management" 
+        subtitle="Manage service areas and availability across all pincodes"
+      />
 
-      if (!response.ok) {
-        throw new Error(`Failed to ${enable ? 'enable' : 'disable'} service for city`);
-      }
-
-      const result = await response.json();
-      toast.success(`Service ${enable ? 'enabled' : 'disabled'} for ${result.updated} locations in ${city}`);
-      fetchLocations();
-      fetchStatistics();
-    } catch (error) {
-      console.error('Error in bulk city action:', error);
-      toast.error(`Failed to ${enable ? 'enable' : 'disable'} service for city`);
-    }
-  };
-
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <MapPinIcon className="w-8 h-8 text-blue-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Location Management</h1>
-              <p className="text-gray-600">Manage service areas and availability</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Locations</p>
+                <p className="text-2xl font-bold text-gray-900">{statistics.totalLocations || 0}</p>
+              </div>
             </div>
           </div>
-          <div className="flex space-x-3">
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Serviceable</p>
+                <p className="text-2xl font-bold text-green-600">{statistics.serviceableLocations || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Non-Serviceable</p>
+                <p className="text-2xl font-bold text-red-600">{statistics.nonServiceableLocations || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Coverage %</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {statistics.totalLocations > 0 
+                    ? Math.round((statistics.serviceableLocations / statistics.totalLocations) * 100)
+                    : 0}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>  
+      {/* Action Buttons */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Locations ({pagination.totalLocations})
+            </h2>
+            {loading && (
+              <div className="flex items-center space-x-2 text-gray-500">
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                <span className="text-sm">Loading...</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center space-x-3">
             <button
-              onClick={() => setShowStatsModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              onClick={() => {
+                console.log('Refreshing locations...');
+                loadLocations();
+                loadStatistics();
+              }}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+              disabled={loading}
             >
-              <ChartBarIcon className="w-5 h-5" />
-              <span>Statistics</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Refresh</span>
             </button>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => {
+                setModalType('add');
+                setFormData({
+                  pincode: '',
+                  areaName: '',
+                  city: '',
+                  state: '',
+                  district: '',
+                  subDistrict: '',
+                  serviceAvailable: false
+                });
+                setShowModal(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
             >
-              <PlusIcon className="w-5 h-5" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
               <span>Add Location</span>
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="lg:col-span-2">
+              <div className="relative">
+                <svg className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by pincode, area, city..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Locations</p>
-              <p className="text-2xl font-bold text-gray-900">{statistics.totalLocations || 0}</p>
+              <select
+                value={filters.city}
+                onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Cities</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Mumbai">Mumbai</option>
+                <option value="Bangalore">Bangalore</option>
+                <option value="Pune">Pune</option>
+                <option value="Chennai">Chennai</option>
+                <option value="Hyderabad">Hyderabad</option>
+                <option value="Kolkata">Kolkata</option>
+                <option value="Nagpur">Nagpur</option>
+              </select>
             </div>
-            <BuildingOfficeIcon className="w-8 h-8 text-blue-600" />
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
+            
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Locations</p>
-              <p className="text-2xl font-bold text-gray-900">{statistics.activeLocations || 0}</p>
+              <select
+                value={filters.serviceAvailable}
+                onChange={(e) => setFilters(prev => ({ ...prev, serviceAvailable: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Status</option>
+                <option value="true">Serviceable</option>
+                <option value="false">Non-Serviceable</option>
+              </select>
             </div>
-            <GlobeAltIcon className="w-8 h-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
+            
             <div>
-              <p className="text-sm font-medium text-gray-600">Serviceable</p>
-              <p className="text-2xl font-bold text-green-600">{statistics.serviceableLocations || 0}</p>
-            </div>
-            <CheckCircleIcon className="w-8 h-8 text-green-600" />
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Non-Serviceable</p>
-              <p className="text-2xl font-bold text-red-600">{statistics.nonServiceableLocations || 0}</p>
-            </div>
-            <XCircleIcon className="w-8 h-8 text-red-600" />
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <div className="md:col-span-2">
-            <div className="relative">
-              <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search locations..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <select
+                value={`${filters.sortBy}-${filters.sortOrder}`}
+                onChange={(e) => {
+                  const [sortBy, sortOrder] = e.target.value.split('-');
+                  setFilters(prev => ({ ...prev, sortBy, sortOrder }));
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="city-asc">City A-Z</option>
+                <option value="city-desc">City Z-A</option>
+                <option value="areaName-asc">Area A-Z</option>
+                <option value="areaName-desc">Area Z-A</option>
+                <option value="pincode-asc">Pincode Low-High</option>
+                <option value="pincode-desc">Pincode High-Low</option>
+                <option value="serviceAvailable-desc">Service Status</option>
+              </select>
             </div>
           </div>
-          <div>
-            <select
-              value={filters.city}
-              onChange={(e) => handleFilterChange('city', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Cities</option>
-              <option value="Delhi">Delhi</option>
-              <option value="Mumbai">Mumbai</option>
-              <option value="Bangalore">Bangalore</option>
-              <option value="Pune">Pune</option>
-              <option value="Chennai">Chennai</option>
-              <option value="Hyderabad">Hyderabad</option>
-              <option value="Kolkata">Kolkata</option>
-            </select>
-          </div>
-          <div>
-            <select
-              value={filters.state}
-              onChange={(e) => handleFilterChange('state', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All States</option>
-              <option value="Delhi">Delhi</option>
-              <option value="Maharashtra">Maharashtra</option>
-              <option value="Karnataka">Karnataka</option>
-              <option value="Tamil Nadu">Tamil Nadu</option>
-              <option value="Telangana">Telangana</option>
-              <option value="West Bengal">West Bengal</option>
-            </select>
-          </div>
-          <div>
-            <select
-              value={filters.serviceAvailable === null ? '' : filters.serviceAvailable.toString()}
-              onChange={(e) => handleFilterChange('serviceAvailable', e.target.value === '' ? null : e.target.value === 'true')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Status</option>
-              <option value="true">Serviceable</option>
-              <option value="false">Non-Serviceable</option>
-            </select>
-          </div>
-          <div>
-            <select
-              value={`${filters.sortBy}-${filters.sortDir}`}
-              onChange={(e) => {
-                const [sortBy, sortDir] = e.target.value.split('-');
-                handleFilterChange('sortBy', sortBy);
-                handleFilterChange('sortDir', sortDir);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="city-asc">City A-Z</option>
-              <option value="city-desc">City Z-A</option>
-              <option value="areaname-asc">Area A-Z</option>
-              <option value="areaname-desc">Area Z-A</option>
-              <option value="pincode-asc">Pincode Low-High</option>
-              <option value="pincode-desc">Pincode High-Low</option>
-              <option value="serviceavailable-desc">Service Status</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Locations Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pincode
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Area Name
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  City
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  State
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Service Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
+        </div>        {/*
+ Locations Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      <span className="ml-2 text-gray-600">Loading locations...</span>
-                    </div>
-                  </td>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Pincode
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Area Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    City
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    State
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Service Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ) : locations.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    No locations found
-                  </td>
-                </tr>
-              ) : (
-                locations.map((location) => (
-                  <tr key={location.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{location.pincode}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{location.areaName}</div>
-                      {location.district && (
-                        <div className="text-xs text-gray-500">{location.district}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{location.city}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{location.state}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleToggleService(location)}
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          location.serviceAvailable
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                        } transition-colors`}
-                      >
-                        {location.serviceAvailable ? (
-                          <>
-                            <CheckCircleIcon className="w-4 h-4 mr-1" />
-                            Serviceable
-                          </>
-                        ) : (
-                          <>
-                            <XCircleIcon className="w-4 h-4 mr-1" />
-                            Non-Serviceable
-                          </>
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedLocation(location);
-                            setShowEditModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                          title="Edit Location"
-                        >
-                          <PencilIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteLocation(location.id)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                          title="Delete Location"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2 text-gray-600">Loading locations...</span>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : locations.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                      No locations found
+                    </td>
+                  </tr>
+                ) : (
+                  locations.map((location) => (
+                    <tr key={location.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{location.pincode}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{location.areaName}</div>
+                        {location.district && (
+                          <div className="text-xs text-gray-500">{location.district}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{location.city}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{location.state}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleToggleService(location)}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            location.serviceAvailable
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : 'bg-red-100 text-red-800 hover:bg-red-200'
+                          }`}
+                        >
+                          {location.serviceAvailable ? (
+                            <>
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Serviceable
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Non-Serviceable
+                            </>
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => {
+                              setSelectedLocation(location);
+                              setFormData(location);
+                              setModalType('edit');
+                              setShowModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                            title="Edit Location"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLocation(location.id)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                            title="Delete Location"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => loadLocations(pagination.currentPage - 1)}
+                  disabled={!pagination.hasPrevious}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => loadLocations(pagination.currentPage + 1)}
+                  disabled={!pagination.hasNext}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing{' '}
+                    <span className="font-medium">
+                      {((pagination.currentPage - 1) * pagination.limit) + 1}
+                    </span>{' '}
+                    to{' '}
+                    <span className="font-medium">
+                      {Math.min(pagination.currentPage * pagination.limit, pagination.totalLocations)}
+                    </span>{' '}
+                    of{' '}
+                    <span className="font-medium">{pagination.totalLocations}</span>{' '}
+                    results
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={() => loadLocations(pagination.currentPage - 1)}
+                      disabled={!pagination.hasPrevious}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                      const pageNum = Math.max(1, Math.min(pagination.currentPage - 2 + i, pagination.totalPages - 4 + i));
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => loadLocations(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            pageNum === pagination.currentPage
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => loadLocations(pagination.currentPage + 1)}
+                      disabled={!pagination.hasNext}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Showing {pagination.currentPage * filters.size + 1} to{' '}
-              {Math.min((pagination.currentPage + 1) * filters.size, pagination.totalElements)} of{' '}
-              {pagination.totalElements} results
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                disabled={!pagination.hasPrevious}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <span className="px-3 py-2 text-sm font-medium text-gray-700">
-                Page {pagination.currentPage + 1} of {pagination.totalPages}
-              </span>
-              <button
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                disabled={!pagination.hasNext}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+        {/* Add/Edit Location Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {modalType === 'add' ? 'Add New Location' : 'Edit Location'}
+                  </h3>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  modalType === 'add' ? handleAddLocation() : handleEditLocation();
+                }} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Pincode *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.pincode}
+                      onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                      maxLength={6}
+                      pattern="[0-9]{6}"
+                      disabled={modalType === 'edit'}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Area Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.areaName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, areaName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.state}
+                      onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      District
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.district}
+                      onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sub District
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.subDistrict}
+                      onChange={(e) => setFormData(prev => ({ ...prev, subDistrict: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="serviceAvailable"
+                      checked={formData.serviceAvailable}
+                      onChange={(e) => setFormData(prev => ({ ...prev, serviceAvailable: e.target.checked }))}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="serviceAvailable" className="ml-2 block text-sm text-gray-900">
+                      Service Available
+                    </label>
+                  </div>
+
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    >
+                      {modalType === 'add' ? 'Add Location' : 'Update Location'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}
-      </div>
-
-      {/* Add Location Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Location</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-                <input
-                  type="text"
-                  value={newLocation.pincode}
-                  onChange={(e) => setNewLocation(prev => ({ ...prev, pincode: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., 110001"
-                  maxLength="6"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Area Name</label>
-                <input
-                  type="text"
-                  value={newLocation.areaName}
-                  onChange={(e) => setNewLocation(prev => ({ ...prev, areaName: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Connaught Place"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input
-                  type="text"
-                  value={newLocation.city}
-                  onChange={(e) => setNewLocation(prev => ({ ...prev, city: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., New Delhi"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                <input
-                  type="text"
-                  value={newLocation.state}
-                  onChange={(e) => setNewLocation(prev => ({ ...prev, state: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Delhi"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
-                <input
-                  type="text"
-                  value={newLocation.district}
-                  onChange={(e) => setNewLocation(prev => ({ ...prev, district: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Central Delhi"
-                />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="serviceAvailable"
-                  checked={newLocation.serviceAvailable}
-                  onChange={(e) => setNewLocation(prev => ({ ...prev, serviceAvailable: e.target.checked }))}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="serviceAvailable" className="ml-2 block text-sm text-gray-900">
-                  Service Available
-                </label>
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={handleAddLocation}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Add Location
-              </button>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Location Modal */}
-      {showEditModal && selectedLocation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Location</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-                <input
-                  type="text"
-                  value={selectedLocation.pincode}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Area Name</label>
-                <input
-                  type="text"
-                  value={selectedLocation.areaName}
-                  onChange={(e) => setSelectedLocation(prev => ({ ...prev, areaName: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input
-                  type="text"
-                  value={selectedLocation.city}
-                  onChange={(e) => setSelectedLocation(prev => ({ ...prev, city: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                <input
-                  type="text"
-                  value={selectedLocation.state}
-                  onChange={(e) => setSelectedLocation(prev => ({ ...prev, state: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
-                <input
-                  type="text"
-                  value={selectedLocation.district || ''}
-                  onChange={(e) => setSelectedLocation(prev => ({ ...prev, district: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="editServiceAvailable"
-                  checked={selectedLocation.serviceAvailable}
-                  onChange={(e) => setSelectedLocation(prev => ({ ...prev, serviceAvailable: e.target.checked }))}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="editServiceAvailable" className="ml-2 block text-sm text-gray-900">
-                  Service Available
-                </label>
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={handleEditLocation}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Update Location
-              </button>
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setSelectedLocation(null);
-                }}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Statistics Modal */}
-      {showStatsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-4xl mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Location Statistics</h3>
-              <button
-                onClick={() => setShowStatsModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XCircleIcon className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* City-wise Statistics */}
-            {statistics.cityWiseStats && (
-              <div className="mb-8">
-                <h4 className="text-lg font-medium text-gray-900 mb-4">City-wise Breakdown</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(statistics.cityWiseStats).map(([city, stats]) => (
-                    <div key={city} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-gray-900">{city}</h5>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleBulkCityAction(city, true)}
-                            className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200"
-                            title="Enable all"
-                          >
-                            Enable All
-                          </button>
-                          <button
-                            onClick={() => handleBulkCityAction(city, false)}
-                            className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200"
-                            title="Disable all"
-                          >
-                            Disable All
-                          </button>
-                        </div>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total:</span>
-                          <span className="font-medium">{stats.total}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-green-600">Serviceable:</span>
-                          <span className="font-medium text-green-600">{stats.serviceable}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-red-600">Non-Serviceable:</span>
-                          <span className="font-medium text-red-600">{stats.nonServiceable}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* State-wise Statistics */}
-            {statistics.stateWiseStats && (
-              <div>
-                <h4 className="text-lg font-medium text-gray-900 mb-4">State-wise Breakdown</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(statistics.stateWiseStats).map(([state, stats]) => (
-                    <div key={state} className="bg-gray-50 p-4 rounded-lg">
-                      <h5 className="font-medium text-gray-900 mb-2">{state}</h5>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total Locations:</span>
-                          <span className="font-medium">{stats.total}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-green-600">Serviceable:</span>
-                          <span className="font-medium text-green-600">{stats.serviceable}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-blue-600">Cities:</span>
-                          <span className="font-medium text-blue-600">{stats.cities}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      </main>
     </div>
   );
 };

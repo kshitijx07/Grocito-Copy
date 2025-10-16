@@ -378,3 +378,376 @@ temp/
 *.sw?
 
 /.metadata/
+
+# ===== COMPREHENSIVE GITIGNORE PATTERNS =====
+
+# Maven and Build Tools
+.mvn/
+.m2/
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.mvn
+mvnw
+mvnw.cmd
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IDE Files - IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.idea_modules/
+atlassian-ide-plugin.xml
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# IDE Files - Eclipse
+.metadata/
+.recommenders/
+.project
+.classpath
+.settings/
+bin/
+.loadpath
+.buildpath
+.target
+.tern-project
+.texlipse
+.springBeans
+.sts4-cache/
+
+# IDE Files - Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+
+# IDE Files - NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+nbactions.xml
+nb-configuration.xml
+
+# IDE Files - Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# IDE Files - Atom
+.atom/
+
+# IDE Files - Vim
+*.swp
+*.swo
+*~
+.netrwhist
+Session.vim
+Sessionx.vim
+
+# IDE Files - Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Test Files and Coverage
+test-results/
+**/test-results/
+coverage/
+**/coverage/
+*.lcov
+.nyc_output/
+junit.xml
+test-output/
+**/test-output/
+*.test.js.snap
+.jest/
+jest.config.js.bak
+__tests__/
+**/__tests__/
+*.spec.js
+*.test.js
+*.spec.ts
+*.test.ts
+test/
+tests/
+**/test/
+**/tests/
+.pytest_cache/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Environment Files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+.env.example
+.env.sample
+*/.env
+*/.env.local
+*/.env.development
+*/.env.test
+*/.env.production
+*/.env.staging
+**/.env
+**/.env.*
+
+# Logs
+logs/
+**/logs/
+*.log
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+debug.log
+error.log
+access.log
+*.debug
+*.trace
+debug/
+**/debug/
+log/
+**/log/
+
+# Deployment Files - Vercel
+.vercel/
+.vercel
+*.vercel
+vercel.json.bak
+
+# Deployment Files - Netlify
+.netlify/
+netlify.toml.bak
+
+# Deployment Files - Heroku
+.heroku/
+Procfile.bak
+
+# Deployment Files - Docker
+.dockerignore.bak
+docker-compose.override.yml
+.docker/
+
+# Deployment Files - AWS
+.aws/
+.elasticbeanstalk/
+.eb/
+
+# Deployment Files - Firebase
+.firebase/
+.firebaserc.bak
+firebase.json.bak
+
+# Deployment Files - GitHub Actions
+.github/workflows/*.bak
+
+# Package Manager Files
+node_modules/
+*/node_modules/
+**/node_modules/
+jspm_packages/
+.npm
+.yarn/
+.yarn-integrity
+.pnp.*
+yarn-error.log
+package-lock.json.bak
+yarn.lock.bak
+.pnpm-store/
+.pnpm-debug.log*
+
+# Cache Directories
+.cache/
+**/cache/
+.tmp/
+tmp/
+temp/
+**/tmp/
+**/temp/
+**/.cache/
+.eslintcache
+.stylelintcache
+.parcel-cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Build Outputs
+build/
+dist/
+out/
+*/build/
+*/dist/
+*/out/
+**/build/
+**/dist/
+**/out/
+.next/
+.nuxt/
+.output/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+data/
+database/
+**/data/
+**/database/
+*.mdb
+*.accdb
+
+# Backup Files
+*.backup
+*.bak
+*.tmp
+*.temp
+*.orig
+*.rej
+*.recover
+*.recovery
+*~
+.#*
+#*#
+*.old
+*.save
+
+# OS Generated Files
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.AppleDouble
+.LSOverride
+Icon
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Compiled Files
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar
+*.rar
+*.7z
+*.gz
+*.bz2
+*.xz
+*.deb
+*.rpm
+*.dmg
+*.pkg
+*.exe
+*.msi
+*.app
+
+# Runtime Files
+*.pid
+*.seed
+*.pid.lock
+pids/
+
+# Documentation
+docs/build/
+site/
+_site/
+.jekyll-cache/
+.sass-cache/
+.docusaurus/
+
+# Generated Files
+generated/
+auto-generated/
+**/generated/
+**/auto-generated/
+.generated/
+**/.generated/
+
+# Security and Sensitive Files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+secret/
+config/secrets.json
+config/local.json
+**/secrets.json
+**/config/secrets.json
+api-keys.txt
+tokens.txt
+credentials.txt
+.secrets
+**/.secrets

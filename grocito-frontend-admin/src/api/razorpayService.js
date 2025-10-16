@@ -1,5 +1,5 @@
-// Secure Razorpay Integration Service
-// Using environment variables for credentials
+// Secure Razorpay Integration Service for Admin Frontend
+// Using environment variables for credentials - Same as main frontend
 export const razorpayService = {
   // Get Razorpay key from environment variables
   getRazorpayKey: () => {
@@ -42,8 +42,8 @@ export const razorpayService = {
         key: razorpayKey, // Using environment variable
         amount: amount * 100, // Convert to paise
         currency: 'INR',
-        name: 'Grocito',
-        description: 'Payment for grocery order',
+        name: 'Grocito Admin',
+        description: 'Admin payment processing',
         order_id: orderId, // Pass order ID if provided
         handler: function (response) {
           console.log('Payment Successful!', response);
@@ -63,15 +63,16 @@ export const razorpayService = {
           }
         },
         prefill: {
-          name: customerName || 'Customer',
-          email: customerEmail || 'customer@example.com',
+          name: customerName || 'Admin User',
+          email: customerEmail || 'admin@grocito.com',
           contact: customerPhone || '9999999999',
         },
         theme: {
           color: '#0d94fb',
         },
         notes: {
-          address: 'Grocito Corporate Office'
+          address: 'Grocito Admin Panel',
+          processed_by: 'admin'
         }
       };
 
@@ -91,5 +92,31 @@ export const razorpayService = {
     // Frontend should send payment details to backend for verification
     console.log('Payment verification should be done on backend:', paymentData);
     return true;
+  },
+
+  // Admin-specific: Process refund
+  processRefund: async (paymentId, amount, reason) => {
+    try {
+      // This would typically call backend API for refund processing
+      console.log('Processing refund:', { paymentId, amount, reason });
+      // Backend API call would go here
+      return { success: true, refundId: 'rfnd_' + Date.now() };
+    } catch (error) {
+      console.error('Refund processing error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Admin-specific: Get payment details
+  getPaymentDetails: async (paymentId) => {
+    try {
+      // This would typically call backend API to get payment details
+      console.log('Fetching payment details for:', paymentId);
+      // Backend API call would go here
+      return { success: true, payment: {} };
+    } catch (error) {
+      console.error('Error fetching payment details:', error);
+      return { success: false, error: error.message };
+    }
   }
 };

@@ -1,0 +1,13 @@
+# Backend .dockerignore
+target/
+.git/
+.gitignore
+README.md
+Dockerfile*
+docker-compose*
+.env
+logs/
+*.log
+.DS_Store
+node_modules/
+grocito-frontend/

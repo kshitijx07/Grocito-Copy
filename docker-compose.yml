@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: grocito-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: grocito_db
+      MYSQL_USER: grocito_user
+      MYSQL_PASSWORD: grocito_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - grocito-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: grocito-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/grocito_db
+      SPRING_DATASOURCE_USERNAME: grocito_user
+      SPRING_DATASOURCE_PASSWORD: grocito_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQL8Dialect
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - grocito-network
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./grocito-frontend
+      dockerfile: Dockerfile
+    container_name: grocito-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - grocito-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+
+networks:
+  grocito-network:
+    driver: bridge

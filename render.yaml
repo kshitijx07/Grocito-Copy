@@ -1,0 +1,44 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: grocito-database
+    env: docker
+    plan: free
+    
+  # Spring Boot Backend
+  - type: web
+    name: grocito-backend
+    env: docker
+    dockerfilePath: ./Dockerfile.backend
+    plan: free
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: grocito-database
+          property: connectionString
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+    healthCheckPath: /actuator/health
+
+  # React Frontend
+  - type: web
+    name: grocito-frontend
+    env: docker
+    dockerfilePath: ./grocito-frontend/Dockerfile
+    plan: free
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: grocito-backend
+          property: host
+
+databases:
+  - name: grocito-database
+    databaseName: grocito_db
+    user: grocito_user
+    plan: free

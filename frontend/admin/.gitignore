@@ -71,7 +71,7 @@ dist
 
 # gatsby files
 .cache/
-public
+# public - needed for React
 
 # storybook build outputs
 .out

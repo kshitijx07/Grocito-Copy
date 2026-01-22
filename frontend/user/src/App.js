@@ -39,10 +39,6 @@ import LocationTest from './components/LocationTest';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Import test and debug scripts
-import './testEnv';
-import './debug-geocoding';
-
 function App() {
   // Check environment variables when the app loads
   useEffect(() => {

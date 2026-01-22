@@ -1,0 +1,126 @@
+# Grocito - Docker Compose for Local Development
+# Run: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # MySQL Database (Local Development Only)
+  mysql:
+    image: mysql:8.0
+    container_name: grocito-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-grocito_db}
+      MYSQL_USER: ${MYSQL_USER:-grocito_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-grocito_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./infrastructure/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - grocito-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: grocito-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-grocito_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-grocito_user}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-grocito_pass}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+    ports:
+      - "8080:8080"
+    networks:
+      - grocito-network
+
+  # User Frontend
+  frontend-user:
+    build:
+      context: ./frontend/user
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8080
+        REACT_APP_WEATHER_API_KEY: ${REACT_APP_WEATHER_API_KEY:-}
+    container_name: grocito-frontend-user
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - grocito-network
+
+  # Admin Frontend
+  frontend-admin:
+    build:
+      context: ./frontend/admin
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8080
+    container_name: grocito-frontend-admin
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3001:80"
+    networks:
+      - grocito-network
+
+  # Delivery Partner Frontend
+  frontend-delivery:
+    build:
+      context: ./frontend/delivery-partner
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8080
+        REACT_APP_RAZORPAY_KEY_ID: ${REACT_APP_RAZORPAY_KEY_ID:-}
+    container_name: grocito-frontend-delivery
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3002:80"
+    networks:
+      - grocito-network
+
+  # Nginx Gateway (Optional - for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: grocito-nginx
+    restart: unless-stopped
+    depends_on:
+      - frontend-user
+      - frontend-admin
+      - frontend-delivery
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - grocito-network
+    profiles:
+      - gateway  # Only runs with: docker-compose --profile gateway up
+
+networks:
+  grocito-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local

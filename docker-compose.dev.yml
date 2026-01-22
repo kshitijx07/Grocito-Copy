@@ -1,0 +1,44 @@
+# Grocito - Docker Compose for Development with Hot Reload
+# Run: docker-compose -f docker-compose.dev.yml up -d
+
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: grocito-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-grocito_db}
+      MYSQL_USER: ${MYSQL_USER:-grocito_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-grocito_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data_dev:/var/lib/mysql
+      - ./infrastructure/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - grocito-network-dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  grocito-network-dev:
+    driver: bridge
+
+volumes:
+  mysql_data_dev:
+    driver: local
+
+# NOTE: In development mode, run frontends and backend locally with npm/mvn
+# This compose file only runs MySQL for development
+# 
+# Usage:
+# 1. Start MySQL: docker-compose -f docker-compose.dev.yml up -d
+# 2. Start Backend: cd backend && mvn spring-boot:run
+# 3. Start Frontends: cd frontend/user && npm start (repeat for admin, delivery-partner)

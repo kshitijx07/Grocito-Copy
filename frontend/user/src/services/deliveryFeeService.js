@@ -131,13 +131,6 @@ class DeliveryFeeService {
    * @returns {object} - Display information
    */
   getDeliveryFeeDisplaySync(orderAmount) {
-    // BULLETPROOF IMPLEMENTATION - SIMPLE AND CLEAR
-    console.log('🔍 DELIVERY FEE CALCULATION:', {
-      orderAmount,
-      threshold: DELIVERY_POLICY.FREE_DELIVERY_THRESHOLD,
-      comparison: `${orderAmount} >= ${DELIVERY_POLICY.FREE_DELIVERY_THRESHOLD}`
-    });
-    
     // Simple, clear logic
     const isFreeDelivery = orderAmount >= 199; // Hardcoded to be absolutely sure
     const deliveryFee = isFreeDelivery ? 0 : 40; // Hardcoded to be absolutely sure
@@ -159,7 +152,6 @@ class DeliveryFeeService {
         : null
     };
     
-    console.log('✅ DELIVERY FEE RESULT:', result);
     return result;
   }
 

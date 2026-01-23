@@ -48,7 +48,6 @@ export const razorpayService = {
         // Passing invalid/custom order_id causes 400 Bad Request
         // For simple payments, omit order_id
         handler: function (response) {
-          console.log('Payment Successful!', response);
           // Only call onSuccess after payment is confirmed
           if (onSuccess) {
             onSuccess({
@@ -60,7 +59,6 @@ export const razorpayService = {
         },
         modal: {
           ondismiss: function() {
-            console.log('Payment cancelled by user');
             if (onFailure) onFailure('Payment cancelled by user');
           }
         },
@@ -81,7 +79,6 @@ export const razorpayService = {
       paymentObject.open();
       return true;
     } catch (error) {
-      console.error('Razorpay initialization error:', error);
       if (onFailure) onFailure('Payment system configuration error');
       return false;
     }
@@ -91,7 +88,6 @@ export const razorpayService = {
   verifyPayment: async (paymentData) => {
     // This would typically be done on the backend
     // Frontend should send payment details to backend for verification
-    console.log('Payment verification should be done on backend:', paymentData);
     return true;
   }
 };

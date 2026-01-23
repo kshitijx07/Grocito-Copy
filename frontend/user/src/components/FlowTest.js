@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
+import { API_BASE_URL } from '../api/config';
 
 const FlowTest = () => {
   const [testResults, setTestResults] = useState({});
@@ -32,7 +33,7 @@ const FlowTest = () => {
 
     // Test 3: Check API connectivity
     try {
-      const response = await fetch('http://localhost:8080/api/products', { 
+      const response = await fetch(`${API_BASE_URL}/api/products`, { 
         method: 'GET',
         timeout: 5000 
       });

@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../api/authService';
 import { toast } from 'react-toastify';
 
+// Production URLs from environment variables
+const CUSTOMER_APP_URL = process.env.REACT_APP_CUSTOMER_APP_URL || 'https://grocito.vercel.app';
+
 const AdminLoginPage = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -22,7 +25,6 @@ const AdminLoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Admin login form submitted with:', { email: formData.email, password: '***' });
     setLoading(true);
     setError('');
 
@@ -164,7 +166,7 @@ const AdminLoginPage = () => {
           <p className="text-gray-600 text-sm">
             Looking for the customer portal?{' '}
             <a 
-              href="http://localhost:3000" 
+              href={CUSTOMER_APP_URL}
               target="_blank" 
               rel="noopener noreferrer"
               className="text-green-500 hover:text-green-600 font-medium"

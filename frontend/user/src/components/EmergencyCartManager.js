@@ -4,6 +4,9 @@ import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
+// API base URL from environment
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
 const EmergencyCartManager = () => {
   const [user, setUser] = useState(null);
   const [cartItems, setCartItems] = useState([]);
@@ -24,9 +27,9 @@ const EmergencyCartManager = () => {
 
   const checkAPIStatus = async () => {
     const endpoints = [
-      { name: 'Backend Health', url: 'http://localhost:8080/api/products' },
-      { name: 'Cart API', url: 'http://localhost:8080/api/cart/1' },
-      { name: 'User API', url: 'http://localhost:8080/api/users' }
+      { name: 'Backend Health', url: `${API_BASE_URL}/api/products` },
+      { name: 'Cart API', url: `${API_BASE_URL}/api/cart/1` },
+      { name: 'User API', url: `${API_BASE_URL}/api/users` }
     ];
 
     const status = {};
@@ -49,14 +52,13 @@ const EmergencyCartManager = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:8080/api/cart/${userId}`, {
+      const response = await axios.get(`${API_BASE_URL}/api/cart/${userId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         timeout: 10000
       });
       setCartItems(response.data || []);
       toast.success('Cart loaded successfully!');
     } catch (error) {
-      console.error('Direct cart load error:', error);
       toast.error('Failed to load cart: ' + error.message);
       setCartItems([]);
     } finally {
@@ -67,7 +69,7 @@ const EmergencyCartManager = () => {
   const updateItemDirect = async (productId, quantity) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:8080/api/cart/update', {
+      await axios.put(`${API_BASE_URL}/api/cart/update`, {
         userId: user.id,
         productId,
         quantity
@@ -82,7 +84,6 @@ const EmergencyCartManager = () => {
       toast.success('Item updated successfully!');
       loadCartDirect(user.id);
     } catch (error) {
-      console.error('Direct update error:', error);
       toast.error('Update failed: ' + error.message);
     }
   };
@@ -90,7 +91,7 @@ const EmergencyCartManager = () => {
   const removeItemDirect = async (productId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete('http://localhost:8080/api/cart/remove', {
+      await axios.delete(`${API_BASE_URL}/api/cart/remove`, {
         data: { userId: user.id, productId },
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +103,6 @@ const EmergencyCartManager = () => {
       toast.success('Item removed successfully!');
       loadCartDirect(user.id);
     } catch (error) {
-      console.error('Direct remove error:', error);
       toast.error('Remove failed: ' + error.message);
     }
   };
@@ -110,7 +110,7 @@ const EmergencyCartManager = () => {
   const addTestItem = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8080/api/cart/add', {
+      await axios.post(`${API_BASE_URL}/api/cart/add`, {
         userId: user.id,
         productId: 1,
         quantity: 1
@@ -125,7 +125,6 @@ const EmergencyCartManager = () => {
       toast.success('Test item added!');
       loadCartDirect(user.id);
     } catch (error) {
-      console.error('Add test item error:', error);
       toast.error('Failed to add test item: ' + error.message);
     }
   };
@@ -133,7 +132,7 @@ const EmergencyCartManager = () => {
   const clearCartDirect = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/cart/${user.id}/clear`, {
+      await axios.delete(`${API_BASE_URL}/api/cart/${user.id}/clear`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         timeout: 10000
       });
@@ -141,7 +140,6 @@ const EmergencyCartManager = () => {
       toast.success('Cart cleared!');
       loadCartDirect(user.id);
     } catch (error) {
-      console.error('Clear cart error:', error);
       toast.error('Failed to clear cart: ' + error.message);
     }
   };

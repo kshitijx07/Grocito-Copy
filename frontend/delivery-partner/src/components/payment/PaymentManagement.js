@@ -90,7 +90,6 @@ const PaymentManagement = ({ order, onPaymentUpdate, onDeliveryBlock }) => {
 
       if (response.ok) {
         const updatedOrder = await response.json();
-        console.log('✅ Cash payment status updated successfully:', updatedOrder);
         
         toast.success('💵 Cash payment collected successfully!', {
           position: "top-center",
@@ -108,7 +107,6 @@ const PaymentManagement = ({ order, onPaymentUpdate, onDeliveryBlock }) => {
         
         // Force refresh after a short delay to ensure UI updates
         setTimeout(() => {
-          console.log('🔄 Refreshing page to update order status...');
           window.location.reload();
         }, 2000);
         
@@ -117,7 +115,6 @@ const PaymentManagement = ({ order, onPaymentUpdate, onDeliveryBlock }) => {
         toast.error(`Failed to update payment: ${errorText}`);
       }
     } catch (error) {
-      console.error('Payment update error:', error);
       toast.error('Failed to update payment status');
     } finally {
       setIsUpdating(false);

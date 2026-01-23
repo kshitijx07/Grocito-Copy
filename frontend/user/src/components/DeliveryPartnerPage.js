@@ -9,6 +9,9 @@ import {
   MapPinIcon,
 } from "@heroicons/react/24/outline";
 
+// Production URLs from environment variables
+const DELIVERY_PORTAL_URL = process.env.REACT_APP_DELIVERY_URL || 'https://grocito-delivery.vercel.app';
+
 const DeliveryPartnerPage = () => {
   const navigate = useNavigate();
 
@@ -107,7 +110,7 @@ const DeliveryPartnerPage = () => {
             satisfaction of bringing smiles to customers' faces.
           </p>
           <a
-            href="http://localhost:3002/auth/register"
+            href={`${DELIVERY_PORTAL_URL}/auth/register`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center bg-green-500 text-white px-8 py-4 rounded-xl hover:bg-green-600 font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
@@ -247,7 +250,7 @@ const DeliveryPartnerPage = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="http://localhost:3002/auth/register"
+              href={`${DELIVERY_PORTAL_URL}/auth/register`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-green-500 text-white px-8 py-4 rounded-xl hover:bg-green-600 font-semibold transition-colors"

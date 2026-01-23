@@ -4,6 +4,7 @@ import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
+import { API_BASE_URL } from '../api/config';
 
 const PaymentHistoryPage = () => {
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -24,7 +25,7 @@ const PaymentHistoryPage = () => {
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8080/api/orders/user/${user.id}/payment-history`);
+      const response = await fetch(`${API_BASE_URL}/api/orders/user/${user.id}/payment-history`);
       
       if (response.ok) {
         const data = await response.json();
@@ -33,7 +34,6 @@ const PaymentHistoryPage = () => {
         throw new Error('Failed to fetch payment history');
       }
     } catch (error) {
-      console.error('Error fetching payment history:', error);
       setError('Failed to load payment history');
       toast.error('Failed to load payment history');
     } finally {

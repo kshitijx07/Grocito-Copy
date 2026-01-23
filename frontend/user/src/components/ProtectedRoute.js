@@ -4,6 +4,10 @@ import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import LoadingSpinner from './LoadingSpinner';
 
+// Production URLs from environment variables
+const ADMIN_PORTAL_URL = process.env.REACT_APP_ADMIN_URL || 'https://grocito-admin.vercel.app';
+const DELIVERY_PORTAL_URL = process.env.REACT_APP_DELIVERY_URL || 'https://grocito-delivery.vercel.app';
+
 const ProtectedRoute = ({ children }) => {
   const navigate = useNavigate();
   const [isChecking, setIsChecking] = React.useState(true);
@@ -13,10 +17,7 @@ const ProtectedRoute = ({ children }) => {
       const isAuthenticated = authService.isAuthenticated();
       const currentUser = authService.getCurrentUser();
       
-      console.log('ProtectedRoute - Auth check:', { isAuthenticated, currentUser });
-      
       if (!isAuthenticated || !currentUser) {
-        console.log('User not authenticated, redirecting to login');
         toast.warning('Please login to continue', {
           position: "bottom-right",
           autoClose: 3000,
@@ -33,10 +34,10 @@ const ProtectedRoute = ({ children }) => {
         
         if (currentUser.role === 'ADMIN') {
           redirectMessage = 'Admin users should use the Admin Portal';
-          redirectUrl = 'http://localhost:3001'; // Admin portal URL
+          redirectUrl = ADMIN_PORTAL_URL;
         } else if (currentUser.role === 'DELIVERY_PARTNER') {
           redirectMessage = 'Delivery partners should use the Delivery App';
-          redirectUrl = 'http://localhost:3002'; // Future delivery app URL
+          redirectUrl = DELIVERY_PORTAL_URL;
         } else {
           redirectMessage = 'Access denied. This portal is for customers only.';
         }
@@ -50,7 +51,7 @@ const ProtectedRoute = ({ children }) => {
         authService.logout();
         
         if (redirectUrl) {
-          toast.info(`Redirecting to ${redirectUrl.replace('http://localhost:', 'port ')}...`, {
+          toast.info(`Redirecting to the appropriate portal...`, {
             position: "bottom-right",
             autoClose: 2000,
           });

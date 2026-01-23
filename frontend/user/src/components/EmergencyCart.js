@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
+// API base URL from environment
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
 // Emergency Cart Component - Completely standalone with direct fetch calls
 const EmergencyCart = () => {
   const [items, setItems] = useState([]);
@@ -36,7 +39,7 @@ const EmergencyCart = () => {
     setMessage('Fetching cart...');
     
     try {
-      const response = await fetch(`http://localhost:8080/api/cart/${uid}`, {
+      const response = await fetch(`${API_BASE_URL}/api/cart/${uid}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -68,7 +71,7 @@ const EmergencyCart = () => {
     setMessage(`Updating product ${productId} to quantity ${quantity}...`);
     
     try {
-      const response = await fetch('http://localhost:8080/api/cart/update', {
+      const response = await fetch(`${API_BASE_URL}/api/cart/update`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -102,7 +105,7 @@ const EmergencyCart = () => {
     setMessage(`Removing product ${productId}...`);
     
     try {
-      const response = await fetch('http://localhost:8080/api/cart/remove', {
+      const response = await fetch(`${API_BASE_URL}/api/cart/remove`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -224,7 +227,7 @@ const EmergencyCart = () => {
             <button 
               onClick={() => {
                 if (window.confirm('Clear entire cart?')) {
-                  fetch(`http://localhost:8080/api/cart/${userId}/clear`, {
+                  fetch(`${API_BASE_URL}/api/cart/${userId}/clear`, {
                     method: 'DELETE',
                     headers: {
                       'Authorization': `Bearer ${token}`,

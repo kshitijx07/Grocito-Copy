@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../../api/authService';
 import { toast } from 'react-toastify';
 
+// Production URLs from environment variables
+const CUSTOMER_APP_URL = process.env.REACT_APP_CUSTOMER_APP_URL || 'https://grocito.vercel.app';
+
 const AdminForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -279,7 +282,7 @@ const AdminForgotPasswordPage = () => {
           <p className="text-admin-500 text-sm">
             Looking for the customer portal?{' '}
             <a 
-              href="http://localhost:3000" 
+              href={CUSTOMER_APP_URL}
               target="_blank" 
               rel="noopener noreferrer"
               className="text-primary-500 hover:text-primary-600 font-medium"

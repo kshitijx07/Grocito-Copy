@@ -2,18 +2,20 @@ import React from 'react';
 import { authService } from '../api/authService';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../api/config';
 
 const TestLogin = () => {
   const navigate = useNavigate();
 
+  // Only show in development
+  if (process.env.NODE_ENV !== 'development') return null;
+
   const testLogin = async () => {
     try {
-      console.log('Testing login with demo credentials...');
       toast.info('Testing login...', { autoClose: 1000 });
       
       // Test with demo credentials
       const response = await authService.login('john@example.com', 'password123');
-      console.log('Login response:', response);
       
       toast.success('Test login successful!');
       
@@ -57,23 +59,20 @@ const TestLogin = () => {
 
   const testBackend = async () => {
     try {
-      console.log('Testing backend connection...');
       toast.info('Testing backend...', { autoClose: 1000 });
       
-      const response = await fetch('http://localhost:8080/api/products');
+      const response = await fetch(`${API_BASE_URL}/api/products`);
       if (response.ok) {
         toast.success('Backend is running!');
       } else {
         toast.error(`Backend responded with status: ${response.status}`);
       }
     } catch (error) {
-      console.error('Backend test error:', error);
       toast.error('Backend is NOT running! Start your Spring Boot app.', { autoClose: 5000 });
     }
   };
 
   const testNavigation = () => {
-    console.log('Testing direct navigation...');
     toast.info('Testing navigation...', { autoClose: 1000 });
     
     // Set test data

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLoginPage from './components/auth/AdminLoginPage';
 import AdminForgotPasswordPage from './components/auth/AdminForgotPasswordPage';
@@ -15,13 +15,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 function App() {
-  // Check environment variables when the app loads
-  useEffect(() => {
-    console.log('Admin App mounted - Environment variables check:');
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    console.log('REACT_APP_API_BASE_URL:', process.env.REACT_APP_API_BASE_URL || 'Using default: http://localhost:8080/api');
-  }, []);
-
   return (
     <Router>
       <div className="App">

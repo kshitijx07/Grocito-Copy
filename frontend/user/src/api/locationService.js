@@ -1,5 +1,8 @@
 import { API_BASE_URL } from './config';
 
+// API base with /api prefix for location endpoints
+const API_URL = `${API_BASE_URL}/api`;
+
 // Enhanced location service with real-time data
 export const locationService = {
   // Get user's current location
@@ -34,7 +37,7 @@ export const locationService = {
     try {
       // Use a real reverse geocoding service (like Google Maps API or OpenStreetMap)
       // For now, we'll use a simple approach to find the nearest location in our database
-      const response = await fetch(`${API_BASE_URL}/api/locations/serviceable`);
+      const response = await fetch(`${API_URL}/locations/serviceable`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -94,7 +97,7 @@ export const locationService = {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/suggestions?query=${encodeURIComponent(query.trim())}`);
+      const response = await fetch(`${API_URL}/locations/suggestions?query=${encodeURIComponent(query.trim())}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -126,7 +129,6 @@ export const locationService = {
         serviceAvailable: location.serviceAvailable
       })) : [];
     } catch (error) {
-      console.error('Error fetching location suggestions:', error);
       throw error;
     }
   },
@@ -138,7 +140,7 @@ export const locationService = {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/autocomplete?query=${encodeURIComponent(query.trim())}`);
+      const response = await fetch(`${API_URL}/locations/autocomplete?query=${encodeURIComponent(query.trim())}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -146,7 +148,6 @@ export const locationService = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error fetching autocomplete data:', error);
       throw error;
     }
   },
@@ -170,7 +171,7 @@ export const locationService = {
   // Get location by pincode
   getLocationByPincode: async (pincode) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/pincode/${pincode}`);
+      const response = await fetch(`${API_URL}/locations/pincode/${pincode}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -189,7 +190,7 @@ export const locationService = {
   // Check service availability
   checkServiceAvailability: async (pincode) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/service-check/${pincode}`);
+      const response = await fetch(`${API_URL}/locations/service-check/${pincode}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -205,7 +206,7 @@ export const locationService = {
   // Search by area name
   searchByAreaName: async (areaName) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/search/area?areaName=${encodeURIComponent(areaName)}`);
+      const response = await fetch(`${API_URL}/locations/search/area?areaName=${encodeURIComponent(areaName)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -221,7 +222,7 @@ export const locationService = {
   // Get all serviceable locations
   getServiceableLocations: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/serviceable`);
+      const response = await fetch(`${API_URL}/locations/serviceable`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

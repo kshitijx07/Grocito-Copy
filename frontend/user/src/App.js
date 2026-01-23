@@ -40,22 +40,13 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
-  // Check environment variables when the app loads
+  // Check environment variables when the app loads (only in development)
   useEffect(() => {
-    console.log('App mounted - Environment variables check:');
-    console.log('REACT_APP_WEATHER_API_KEY:', process.env.REACT_APP_WEATHER_API_KEY ? 'Present' : 'Missing');
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-
-    // Log all environment variables that start with REACT_APP_
-    const reactEnvVars = Object.keys(process.env)
-      .filter(key => key.startsWith('REACT_APP_'));
-
-    console.log('All REACT_APP_ environment variables:', reactEnvVars);
-
-    // Alert if the API key is missing
-    if (!process.env.REACT_APP_WEATHER_API_KEY) {
-      console.error('WARNING: OpenWeatherMap API key is missing!');
-      console.error('Please check your .env file and make sure it contains REACT_APP_WEATHER_API_KEY');
+    if (process.env.NODE_ENV === 'development') {
+      // Alert if the API key is missing
+      if (!process.env.REACT_APP_WEATHER_API_KEY) {
+        console.warn('WARNING: OpenWeatherMap API key is missing!');
+      }
     }
   }, []);
 

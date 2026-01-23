@@ -44,26 +44,17 @@ const LandingPage = () => {
     // Debounce search
     const timeoutId = setTimeout(async () => {
       try {
-        console.log('Fetching autocomplete data for:', value);
-        console.log('API URL will be: http://localhost:8080/api/locations/autocomplete?query=' + encodeURIComponent(value));
-        
         // Use the new autocomplete endpoint for better structured data
         const results = await locationService.getAutocompleteData(value);
-        console.log('Received autocomplete data:', results);
-        console.log('Number of results:', results ? results.length : 0);
         
         if (results && Array.isArray(results) && results.length > 0) {
           setSuggestions(results);
           setShowSuggestions(true);
-          console.log('Showing suggestions dropdown');
         } else {
           setSuggestions([]);
           setShowSuggestions(false);
-          console.log('No results found, hiding suggestions');
         }
       } catch (error) {
-        console.error('Error fetching location suggestions:', error);
-        console.error('Error details:', error.message);
         setSuggestions([]);
         setShowSuggestions(false);
         toast.error('Unable to fetch location suggestions. Please try again.');

@@ -44,7 +44,9 @@ export const razorpayService = {
         currency: 'INR',
         name: 'Grocito',
         description: 'Payment for grocery order',
-        order_id: orderId, // Pass order ID if provided
+        // Note: order_id should only be passed if created via Razorpay backend API
+        // Passing invalid/custom order_id causes 400 Bad Request
+        // For simple payments, omit order_id
         handler: function (response) {
           console.log('Payment Successful!', response);
           // Only call onSuccess after payment is confirmed

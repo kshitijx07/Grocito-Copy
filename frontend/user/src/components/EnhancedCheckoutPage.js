@@ -66,7 +66,6 @@ const EnhancedCheckoutPage = () => {
     try {
       await razorpayService.initializePayment({
         amount: totalAmount,
-        orderId: 'order_' + Date.now(),
         customerName: user?.fullName || user?.email || 'Customer',
         customerEmail: user?.email || 'customer@example.com',
         customerPhone: user?.contactNumber || '9999999999',

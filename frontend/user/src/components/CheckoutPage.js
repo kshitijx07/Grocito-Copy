@@ -108,7 +108,6 @@ const CheckoutPage = () => {
     try {
       await razorpayService.initializePayment({
         amount: totalAmount,
-        orderId: 'order_' + Date.now(),
         customerName: user.fullName || user.email,
         customerEmail: user.email,
         customerPhone: user.contactNumber,

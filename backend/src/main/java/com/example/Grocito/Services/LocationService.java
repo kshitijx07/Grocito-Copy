@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -23,11 +25,33 @@ public class LocationService {
     private static final Logger logger = LoggerFactory.getLogger(LocationService.class);
     private static final String INDIA_POST_API = "https://api.postalpincode.in/pincode/";
     
+    // Configuration to enable/disable external API calls (default: false for reliability)
+    @Value("${location.api.enabled:false}")
+    private boolean externalApiEnabled;
+    
+    // Timeout settings for external API calls
+    @Value("${location.api.timeout.connect:5000}")
+    private int connectTimeout;
+    
+    @Value("${location.api.timeout.read:5000}")
+    private int readTimeout;
+    
     @Autowired
     private LocationRepository locationRepository;
     
-    private final RestTemplate restTemplate = new RestTemplate();
+    private RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    
+    // Initialize RestTemplate with timeout settings
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(connectTimeout);
+        factory.setReadTimeout(readTimeout);
+        this.restTemplate = new RestTemplate(factory);
+        logger.info("LocationService initialized with externalApiEnabled={}, connectTimeout={}ms, readTimeout={}ms", 
+                    externalApiEnabled, connectTimeout, readTimeout);
+    }
     
     // Get location suggestions based on query (area name or pincode)
     public List<Location> getLocationSuggestions(String query) {
@@ -60,18 +84,24 @@ public class LocationService {
         return dbResults.size() > 10 ? dbResults.subList(0, 10) : dbResults;
     }
     
-    // Fetch location data from India Post API
+    // Fetch location data from India Post API (only if enabled)
     public Location fetchLocationFromAPI(String pincode) {
-        logger.info("Fetching location data from API for pincode: {}", pincode);
+        // Always check database first
+        Optional<Location> existingLocation = locationRepository.findByPincodeAndIsActiveTrue(pincode);
+        if (existingLocation.isPresent()) {
+            logger.debug("Location already exists in database for pincode: {}", pincode);
+            return existingLocation.get();
+        }
+        
+        // If external API is disabled, skip API call
+        if (!externalApiEnabled) {
+            logger.debug("External API is disabled, skipping API call for pincode: {}", pincode);
+            return null;
+        }
+        
+        logger.info("Fetching location data from external API for pincode: {}", pincode);
         
         try {
-            // Check if already exists in database
-            Optional<Location> existingLocation = locationRepository.findByPincodeAndIsActiveTrue(pincode);
-            if (existingLocation.isPresent()) {
-                logger.debug("Location already exists in database for pincode: {}", pincode);
-                return existingLocation.get();
-            }
-            
             String url = INDIA_POST_API + pincode;
             String response = restTemplate.getForObject(url, String.class);
             
@@ -104,29 +134,37 @@ public class LocationService {
                 }
             }
         } catch (Exception e) {
-            logger.error("Error fetching location data from API for pincode: {}", pincode, e);
+            logger.warn("External API call failed for pincode: {} - {}. This is expected in some deployment environments.", 
+                        pincode, e.getMessage());
         }
         
         return null;
     }
     
-    // Get location by pincode
+    // Get location by pincode - DATABASE FIRST, then API fallback
     public Optional<Location> getLocationByPincode(String pincode) {
         logger.debug("Getting location for pincode: {}", pincode);
         
-        // First check database
+        // ALWAYS check database first - this is the primary source
         Optional<Location> location = locationRepository.findByPincodeAndIsActiveTrue(pincode);
         
-        // If not found in database, try to fetch from API
-        if (location.isEmpty()) {
-            logger.info("Location not found in database, fetching from API for pincode: {}", pincode);
-            Location fetchedLocation = fetchLocationFromAPI(pincode);
-            if (fetchedLocation != null) {
-                location = Optional.of(fetchedLocation);
-            }
+        if (location.isPresent()) {
+            logger.debug("Location found in database for pincode: {}", pincode);
+            return location;
         }
         
-        return location;
+        // Only try external API if location not found in database AND external API is enabled
+        if (externalApiEnabled) {
+            logger.info("Location not found in database, attempting to fetch from external API for pincode: {}", pincode);
+            Location fetchedLocation = fetchLocationFromAPI(pincode);
+            if (fetchedLocation != null) {
+                return Optional.of(fetchedLocation);
+            }
+        } else {
+            logger.debug("Location not found in database for pincode: {}. External API is disabled.", pincode);
+        }
+        
+        return Optional.empty();
     }
     
     // Check if service is available for pincode

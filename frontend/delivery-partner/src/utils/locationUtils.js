@@ -1,4 +1,5 @@
 // Location utility functions for better display
+import { API_BASE_URL } from '../services/api';
 
 /**
  * Format location with area name and pincode (synchronous version)
@@ -30,7 +31,7 @@ export const getAreaFromPincodeAPI = async (pincode) => {
   
   try {
     // Call the location API to get real area data (same as landing page)
-    const response = await fetch(`http://localhost:8080/api/locations/pincode/${pincode}`);
+    const response = await fetch(`${API_BASE_URL}/api/locations/pincode/${pincode}`);
     if (response.ok) {
       const locationData = await response.json();
       return locationData.areaName || locationData.city || 'Unknown Area';

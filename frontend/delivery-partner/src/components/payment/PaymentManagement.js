@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { CheckCircleIcon, CurrencyDollarIcon, CreditCardIcon, DevicePhoneMobileIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { getRazorpayKey, isTestMode, validateRazorpayConfig, getRazorpayEnvironment } from '../../config/razorpayConfig';
+import { getRazorpayKey, isTestMode, validateRazorpayConfig } from '../../config/razorpayConfig';
+import { API_BASE_URL } from '../../services/api';
 
 const PaymentManagement = ({ order, onPaymentUpdate, onDeliveryBlock }) => {
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -75,7 +76,7 @@ const PaymentManagement = ({ order, onPaymentUpdate, onDeliveryBlock }) => {
   const handleCashPayment = async () => {
     setIsUpdating(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/orders/${order.id}/payment`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${order.id}/payment`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -263,7 +264,7 @@ const PaymentManagement = ({ order, onPaymentUpdate, onDeliveryBlock }) => {
                     
                     try {
                       console.log('💾 Updating payment status in database...');
-                      const updateResponse = await fetch(`http://localhost:8080/api/orders/${order.id}/payment`, {
+                      const updateResponse = await fetch(`${API_BASE_URL}/api/orders/${order.id}/payment`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams({
@@ -347,7 +348,7 @@ const PaymentManagement = ({ order, onPaymentUpdate, onDeliveryBlock }) => {
                       console.log('✅ Payment successful:', response);
                       
                       try {
-                        const updateResponse = await fetch(`http://localhost:8080/api/orders/${order.id}/payment`, {
+                        const updateResponse = await fetch(`${API_BASE_URL}/api/orders/${order.id}/payment`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                           body: new URLSearchParams({

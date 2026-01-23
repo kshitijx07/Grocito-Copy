@@ -13,6 +13,7 @@ import {
   StarIcon as StarIconSolid 
 } from '@heroicons/react/24/solid';
 import { toast } from 'react-toastify';
+import { API_BASE_URL } from '../api/config';
 
 const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
   const [partnerInfo, setPartnerInfo] = useState(null);
@@ -29,7 +30,7 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
       console.log('Fetching delivery partner info for order:', orderId);
       
       // Fetch delivery partner assignment for this order
-      const response = await fetch(`http://localhost:8080/api/order-assignments/order/${orderId}`);
+      const response = await fetch(`${API_BASE_URL}/api/order-assignments/order/${orderId}`);
       
       console.log('Assignment API response status:', response.status);
       
@@ -118,7 +119,7 @@ const DeliveryPartnerCard = ({ orderId, orderStatus, onRefresh }) => {
       
       // Track call in backend
       try {
-        await fetch(`http://localhost:8080/api/order-assignments/${orderId}/call-log`, {
+        await fetch(`${API_BASE_URL}/api/order-assignments/${orderId}/call-log`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
